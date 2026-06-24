@@ -1,0 +1,28 @@
+{
+  "name": "gff-scraper-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Backend: scraping, parsing, normalization, comparison & export engine.",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "postinstall": "playwright install chromium || echo 'Playwright browser install skipped (will fall back to Puppeteer/axios).'"
+  },
+  "dependencies": {
+    "axios": "^1.7.9",
+    "cheerio": "^1.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "exceljs": "^4.4.0",
+    "express": "^4.21.2",
+    "fuse.js": "^7.0.0",
+    "playwright": "^1.49.1",
+    "string-similarity": "^4.0.4",
+    "xlsx": "^0.18.5"
+  },
+  "optionalDependencies": {
+    "puppeteer": "^23.11.1"
+  }
+}

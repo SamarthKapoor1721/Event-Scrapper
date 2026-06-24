@@ -1,0 +1,90 @@
+{
+  "meta": {
+    "event": "annual conclave ",
+    "year": "2026",
+    "urls": [
+      "https://hr.economictimes.indiatimes.com/annual-conclave"
+    ],
+    "engines": [
+      "playwright"
+    ],
+    "confidence": 1,
+    "scrapedAt": "2026-06-23T19:24:00.713Z",
+    "linkedinEnriched": true,
+    "count": 12
+  },
+  "companies": [
+    {
+      "company": "Presenting Partner",
+      "category": "",
+      "website": "https://www.cornerstoneondemand.com/",
+      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17779781952376_NEW_CSOD_logo_HRZ_RGB.webp"
+    },
+    {
+      "company": "hr",
+      "category": "",
+      "website": "https://hr.economictimes.indiatimes.com/",
+      "logoUrl": "https://st.etb2bimg.com/Themes/Release/theme4/images/logos/hr-logo-mobile-header.svg?mod=3361"
+    },
+    {
+      "company": "CSOD",
+      "category": "Presenting Partner",
+      "website": "https://www.cornerstoneondemand.com/",
+      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17779781952376_NEW_CSOD_logo_HRZ_RGB.webp"
+    },
+    {
+      "company": "Oracle",
+      "category": "Co-Presenting Partner",
+      "website": "https://www.oracle.com/in/",
+      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17797936808319_oracle_logo.webp"
+    },
+    {
+      "company": "UKG",
+      "category": "Workforce Transformation Partner",
+      "website": "https://www.ukg.in/",
+      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_1776075703078_UKG_Logo_1.webp"
+    },
+    {
+      "company": "Ishwa",
+      "category": "Gold Partner",
+      "website": "https://ishwaconsulting.com/",
+      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17821065632885_1_updated_Ishwa_Logo.webp"
+    },
+    {
+      "company": "Digiverifer",
+      "category": "Supporting Partners",
+      "website": "https://www.digiverifier.com/",
+      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17779785643036_Digiverifier_Logo_2.webp"
+    },
+    {
+      "company": "OmTrax",
+      "category": "Supporting Partners",
+      "website": "https://www.omtrax.com/index.php",
+      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_1777978726264_OmTrax_Logo.webp"
+    },
+    {
+      "company": "1to1Help",
+      "category": "Supporting Partners",
+      "website": "https://www.1to1help.com/",
+      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17780669973972_Horizontal_Logo.webp"
+    },
+    {
+      "company": "Trajectorie",
+      "category": "Supporting Partners",
+      "website": "https://trajectorie.com/",
+      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17779788145027_New_Logo_A_1.webp"
+    },
+    {
+      "company": "Zepcruit",
+      "category": "Supporting Partners",
+      "website": "https://zepcruit.ai/",
+      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17785672152876_Zepcruit_Logo_2.webp"
+    },
+    {
+      "company": "Leg Accord",
+      "category": "Supporting Partners",
+      "website": "https://www.legaccord.com/",
+      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17821072418436_LegAccord_New_logo_1.webp"
+    }
+  ]
+}

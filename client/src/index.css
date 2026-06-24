@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply text-slate-900 antialiased dark:text-slate-100;
+  background-color: #f6f7fb;
+  background-image:
+    radial-gradient(60rem 60rem at 110% -10%, rgba(99, 102, 241, 0.12), transparent 60%),
+    radial-gradient(50rem 50rem at -10% 0%, rgba(217, 70, 239, 0.10), transparent 55%);
+  background-attachment: fixed;
+}
+
+.dark body {
+  background-color: #070b18;
+  background-image:
+    radial-gradient(60rem 60rem at 110% -10%, rgba(99, 102, 241, 0.18), transparent 60%),
+    radial-gradient(50rem 50rem at -10% 0%, rgba(217, 70, 239, 0.12), transparent 55%);
+}
+
+@layer components {
+  /* Surface card used across panels. */
+  .card {
+    @apply rounded-2xl border border-slate-200/70 bg-white/80 shadow-sm backdrop-blur-sm
+           transition-shadow dark:border-white/10 dark:bg-slate-900/70;
+  }
+  .card-hover {
+    @apply hover:shadow-md hover:shadow-indigo-500/5;
+  }
+
+  /* Brand gradient text + primary button. */
+  .gradient-text {
+    @apply bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 bg-clip-text text-transparent;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600
+           px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/20 transition
+           hover:from-indigo-500 hover:to-violet-500 hover:shadow-indigo-600/30 active:scale-[0.98]
+           disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/70
+           px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white
+           active:scale-[0.98] disabled:opacity-50
+           dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10;
+  }
+  .input {
+    @apply w-full rounded-xl border border-slate-200 bg-white/80 px-3.5 py-2.5 text-sm text-slate-900 outline-none
+           transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10
+           dark:border-white/10 dark:bg-slate-800/60 dark:text-slate-100;
+  }
+  .field-label {
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400;
+  }
+}
+
+/* Thin custom scrollbars. */
+.log-scroll::-webkit-scrollbar,
+.nice-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.log-scroll::-webkit-scrollbar-thumb,
+.nice-scroll::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-slate-300/70 dark:bg-slate-600/60;
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.45); }
+  70% { box-shadow: 0 0 0 8px rgba(99, 102, 241, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+}
+.live-dot {
+  animation: pulse-ring 1.8s infinite;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up {
+  animation: fade-up 0.35s ease-out both;
+}
+
+/* Animated stripes for the active progress bar. */
+@keyframes bar-stripes {
+  from { background-position: 0 0; }
+  to { background-position: 1.5rem 0; }
+}
+.bar-stripes {
+  background-image: linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.22) 25%, transparent 25%,
+    transparent 50%, rgba(255, 255, 255, 0.22) 50%,
+    rgba(255, 255, 255, 0.22) 75%, transparent 75%, transparent
+  );
+  background-size: 1.5rem 1.5rem;
+  animation: bar-stripes 0.8s linear infinite;
+}
