@@ -121,6 +121,36 @@ export async function buildYearWorkbook({ speakers = [], companies = [] }) {
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
 
+/** Build a single-sheet workbook from arbitrary rows (preserving columns). */
+export async function buildRowsWorkbook(rows = [], sheetName = 'Sheet1', headers) {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Event Scraper';
+  wb.created = new Date();
+  const keys = headers && headers.length ? headers : rows.length ? Object.keys(rows[0]) : ['(empty)'];
+  const cols = keys.map((h) => ({ header: String(h), key: String(h), width: Math.min(50, Math.max(14, String(h).length + 6)) }));
+  addSheet(wb, sheetName, cols, rows);
+  return Buffer.from(await wb.xlsx.writeBuffer());
+}
+
+/** Build a workbook of LinkedIn profiles from an X-ray search. Returns a Buffer. */
+export async function buildProfilesWorkbook(rows = []) {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Event Scraper';
+  wb.created = new Date();
+  addSheet(
+    wb,
+    'LinkedIn Profiles',
+    [
+      { header: 'Name', key: 'Name', width: 28 },
+      { header: 'Designation', key: 'Designation', width: 40 },
+      { header: 'Company', key: 'Company', width: 30 },
+      { header: 'LinkedIn URL', key: 'LinkedIn URL', width: 50 },
+    ],
+    rows
+  );
+  return Buffer.from(await wb.xlsx.writeBuffer());
+}
+
 /** Build the comparison workbook (returning + missing + full per-year lists). */
 export async function buildComparisonWorkbook(comparison) {
   const wb = new ExcelJS.Workbook();

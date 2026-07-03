@@ -109,6 +109,11 @@ function extractCards($, baseUrl, sel, kind, logger) {
         rec.designation = lines[0] || '';
         if (!rec.company) rec.company = guessCompany(lines) || '';
       }
+      // Some layouts show the company as a separate logo image (no text), with
+      // the whole text line being the role. Prefer that as the company — it also
+      // stops the role from being comma-split into a bogus company downstream.
+      const logoCompany = companyFromLogo($, $c, $c.find('img').first().get(0));
+      if (logoCompany) rec.company = logoCompany;
       if (rec.name) out.push(rec);
     } else {
       let name = firstMatch($, $c, sel.name);
@@ -153,7 +158,8 @@ function heuristicSpeakers($, baseUrl, logger) {
     if (!name) continue;
     const lines = textLines($, $c).filter((t) => t !== name);
     const designation = lines[0] || '';
-    const company = guessCompany(lines) || '';
+    // Prefer a company logo image (separate from the role text) when present.
+    const company = companyFromLogo($, $c, img.get(0)) || guessCompany(lines) || '';
     const link = $c.find('a').first();
     out.push({
       name,
@@ -244,6 +250,50 @@ function textLines($, $c) {
     if (own && own.length < 80) parts.push(own);
   });
   return [...new Set(parts)];
+}
+
+/**
+ * Some speaker layouts put the company as a separate logo image (often with no
+ * alt text) instead of in the text. Derive the company from such a logo's alt,
+ * or failing that from its filename. Skips the person's own photo.
+ */
+function companyFromLogo($, $c, personImgEl) {
+  let company = '';
+  $c.find('figure img, img[src*="logo" i], img[class*="logo" i]').each((_, el) => {
+    if (company || el === personImgEl) return;
+    const $i = $(el);
+    const alt = clean($i.attr('alt')).replace(/\s*logo\s*$/i, '');
+    if (alt && !isJunkName(alt)) {
+      company = alt;
+      return;
+    }
+    const guess = companyFromFilename($i.attr('src') || $i.attr('data-src') || '');
+    if (guess) company = guess;
+  });
+  return company;
+}
+
+/** Best-effort company name from a logo image filename, e.g.
+ * "file_1757..._reliance_consumer_products_limited_2_.webp" -> "Reliance Consumer Products Limited". */
+// Generic non-company words that show up in logo filenames.
+const FILENAME_JUNK_RE = /untitled|removebg|screenshot|whats ?app|\bimage\b|\bphoto\b|preview|\bcopy\b|transparent|\bfinal\b|edited|^new\b/i;
+
+function companyFromFilename(src) {
+  try {
+    let base = decodeURIComponent(String(src).split('/').pop().split('?')[0]);
+    base = base.replace(/\.[a-z0-9]+$/i, ''); // extension
+    base = base.replace(/^(?:data_)?file_\d+_/i, ''); // CMS upload prefix
+    base = base.replace(/[_-]+/g, ' '); // separators → spaces
+    base = base.replace(/\b\d{6,}\b/g, ' '); // long numeric ids
+    base = base.replace(/\blogo\b/gi, ' '); // drop the word "logo"
+    base = base.replace(/\s+\d+\s*$/, ''); // trailing "_2"
+    base = clean(base);
+    if (!base || base.length < 2 || /^\d+$/.test(base)) return '';
+    if (FILENAME_JUNK_RE.test(base)) return ''; // placeholder / non-brand image
+    return base.split(' ').map((w) => (w ? w[0].toUpperCase() + w.slice(1) : '')).join(' ').trim();
+  } catch {
+    return '';
+  }
 }
 
 function guessCompany(lines) {

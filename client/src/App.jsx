@@ -7,6 +7,11 @@ import LogPanel from './components/LogPanel';
 import ResultsTable from './components/ResultsTable';
 import ComparePanel from './components/ComparePanel';
 import BatchPanel from './components/BatchPanel';
+import SearchPanel from './components/SearchPanel';
+import FindPeoplePanel from './components/FindPeoplePanel';
+import DedupePanel from './components/DedupePanel';
+import PostMinerPanel from './components/PostMinerPanel';
+import EventFinderPanel from './components/EventFinderPanel';
 
 const DEFAULT_FORM = {
   event: 'Global Fintech Fest',
@@ -31,6 +36,7 @@ const DEFAULT_FORM = {
 
 export default function App() {
   const [form, setForm] = useState(DEFAULT_FORM);
+  const [view, setView] = useState('scraper'); // 'scraper' | 'people'
   const [dark, setDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches);
   const [busy, setBusy] = useState(false);
   const [logs, setLogs] = useState([]);
@@ -109,12 +115,16 @@ export default function App() {
     es.onerror = () => es.close();
   }
 
-  async function handleScrape() {
+  async function handleScrape(urlOverride) {
     let payload;
     try {
       payload = buildPayload();
     } catch (err) {
       return flash(err.message, 'error');
+    }
+    // When launched from the Event Finder, scrape just that one event URL.
+    if (typeof urlOverride === 'string' && urlOverride) {
+      payload = { ...payload, urls: [urlOverride], crawl: true, maxPages: 40 };
     }
     if (!payload.urls.length) return flash('Enter a website URL first.', 'error');
     if (!payload.year) return flash('Enter a year.', 'error');
@@ -136,6 +146,14 @@ export default function App() {
     } finally {
       setBusy(false);
     }
+  }
+
+  // Launched from the Event Finder: show the URL in the Scraper form, switch to
+  // that tab, and immediately scrape (whole-site crawl) that event page.
+  function handleScrapeEvent(url) {
+    setForm((f) => ({ ...f, url, speakersUrl: '', companiesUrl: '', extraUrls: '', crawl: true }));
+    setView('scraper');
+    handleScrape(url);
   }
 
   // Manual edit/replace of a speaker's LinkedIn URL before export. A user-set
@@ -218,9 +236,31 @@ export default function App() {
     <div className="min-h-screen">
       <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/70 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/60">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <h1 className="text-lg font-extrabold leading-tight tracking-tight">
-            Event <span className="gradient-text">Scraper</span>
-          </h1>
+          <div className="flex items-center gap-5">
+            <h1 className="text-lg font-extrabold leading-tight tracking-tight">
+              Event <span className="gradient-text">Scraper</span>
+            </h1>
+            <nav className="flex gap-1 rounded-xl bg-slate-100 p-1 dark:bg-white/5">
+              {[
+                ['scraper', 'Scraper'],
+                ['people', 'Find People'],
+                ['posts', 'Company POCs'],
+                ['events', 'Event Finder'],
+              ].map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => setView(key)}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+                    view === key
+                      ? 'bg-white text-indigo-600 shadow-sm dark:bg-white/10 dark:text-indigo-300'
+                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </nav>
+          </div>
           <button
             onClick={() => setDark((d) => !d)}
             className="rounded-xl border border-slate-200 bg-white/60 px-3.5 py-1.5 text-sm font-medium transition hover:bg-white dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
@@ -231,6 +271,20 @@ export default function App() {
         </div>
       </header>
 
+      {view === 'people' ? (
+        <main className="mx-auto max-w-6xl space-y-5 px-4 py-7">
+          <FindPeoplePanel />
+          <DedupePanel />
+        </main>
+      ) : view === 'posts' ? (
+        <main className="mx-auto max-w-6xl px-4 py-7">
+          <PostMinerPanel />
+        </main>
+      ) : view === 'events' ? (
+        <main className="mx-auto max-w-6xl px-4 py-7">
+          <EventFinderPanel onScrapeEvent={handleScrapeEvent} />
+        </main>
+      ) : (
       <main className="mx-auto max-w-6xl space-y-5 px-4 py-7">
         <ScrapeForm
           form={form}
@@ -284,12 +338,15 @@ export default function App() {
 
         <ResultsTable result={result} onEditLinkedIn={handleEditLinkedIn} />
 
+        <SearchPanel />
+
         <BatchPanel />
 
         <footer className="pt-4 text-center text-xs text-slate-400">
           Playwright → Puppeteer → Axios fallback · heuristic + optional AI extraction · free LinkedIn enrichment
         </footer>
       </main>
+      )}
 
       {toast && (
         <div

@@ -48,6 +48,8 @@ const ACRONYMS = {
   cfo: 'chief financial officer', coo: 'chief operating officer',
   cmo: 'chief marketing officer', chro: 'chief human resources officer',
   cio: 'chief information officer', cpo: 'chief product officer',
+  clo: 'chief learning officer', 'l&d': 'learning and development',
+  ld: 'learning and development', od: 'organizational development',
   pr: 'public relations', bd: 'business development', it: 'information technology',
   gm: 'general manager', md: 'managing director', cx: 'customer experience',
   ux: 'user experience', hrbp: 'human resources business partner',
@@ -110,10 +112,22 @@ function scoreCandidate(person, candidate) {
     (profile ? `${profile.name} ${profile.headline} ${profile.company} ${profile.location}` : '');
 
   const nScore = nameScore(person.name, nameText);
-  const cScore = companyScore(person.company, profile?.company || haystack);
   const dScore = designationScore(person.designation, titleText || haystack);
+  const hasCompany = Boolean(normalizeCompany(person.company));
+  const cScore = hasCompany ? companyScore(person.company, profile?.company || haystack) : 0;
 
-  const confidence = 0.5 * nScore + 0.3 * cScore + 0.2 * dScore;
+  // Weighting: name 50% · company 30% · designation 20%.
+  // Two adjustments so correct matches aren't buried:
+  //   • No company provided → drop the company term and reweight name/designation
+  //     (we can't corroborate it, so it shouldn't cap the score at 70%).
+  //   • Company provided but not visible in the result → floor it, since LinkedIn
+  //     snippets routinely omit the employer (absence ≠ wrong company).
+  let confidence;
+  if (!hasCompany) {
+    confidence = 0.7 * nScore + 0.3 * dScore;
+  } else {
+    confidence = 0.5 * nScore + 0.3 * Math.max(cScore, 0.35) + 0.2 * dScore;
+  }
 
   const matched_company =
     clean(profile?.company) || (cScore >= 0.6 ? clean(person.company) : '');
@@ -235,16 +249,18 @@ async function parseResults(html, decode) {
     const url = cleanProfileUrl(href);
     if (!url || seen.has(url)) return;
     seen.add(url);
-    const $card = $a.closest('.snippet, [data-type], li.b_algo, article, .result, .w-gl__result');
-    const title = clean($card.find('h2, h3, [class*="title"]').first().text()) || clean($a.text());
-    const snippet = clean($card.find('[class*="description"], .b_caption p, .snippet-description, p').first().text());
+    const $card = $a.closest('.snippet, [data-type], li.b_algo, article, .result, .w-gl__result, div.g, div.tF2Cxc, div.MjjYud');
+    const title = clean($card.find('h3, h2, [class*="title"]').first().text()) || clean($a.text());
+    const snippet = clean($card.find('[class*="description"], .b_caption p, .VwiC3b, .snippet-description, p').first().text());
     out.push({ url, title, snippet, name: nameFromTitle(title) });
   });
   return out;
 }
 
-/** Keyless browser search — try free engines until one answers. Retries challenges. */
-async function searchKeyless(page, query, logger) {
+/** Keyless browser search — try free engines until one answers. Retries challenges.
+ *  Sets `ctx.blocked = true` when it sees challenge/connection errors (vs. a genuine
+ *  empty result) so the caller can back off when the engines start rate-limiting. */
+async function searchKeyless(page, query, logger, ctx) {
   for (const engine of SEARCH_ENGINES) {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
@@ -252,6 +268,7 @@ async function searchKeyless(page, query, logger) {
         await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
         const html = await page.content();
         if (looksLikeChallenge(html)) {
+          if (ctx) ctx.blocked = true;
           if (attempt === 0) {
             await delay(3000 + Math.floor(Math.random() * 2000));
             continue;
@@ -267,6 +284,8 @@ async function searchKeyless(page, query, logger) {
         if (/crash|chrome-error|target.*clos|detached|session closed/i.test(err.message)) {
           throw new Error('PAGE_DEAD');
         }
+        // Connection refused/closed/reset = the engine is throttling this IP.
+        if (/ERR_CONNECTION|ERR_NETWORK|ERR_TIMED_OUT|timeout/i.test(err.message) && ctx) ctx.blocked = true;
         logger?.warn(`${engine.name} search error: ${err.message.split('\n')[0]}`);
         break;
       }
@@ -284,7 +303,7 @@ async function braveGate() {
   if (wait) await delay(wait);
 }
 
-async function searchBraveApi(query, logger) {
+async function searchBraveApi(query, logger, { count = 10, offset = 0 } = {}) {
   const key = process.env.BRAVE_API_KEY;
   if (!key) return [];
   const { default: axios } = await import('axios');
@@ -292,7 +311,7 @@ async function searchBraveApi(query, logger) {
     await braveGate();
     try {
       const res = await axios.get('https://api.search.brave.com/res/v1/web/search', {
-        params: { q: query, count: 10 },
+        params: { q: query, count, offset },
         headers: { Accept: 'application/json', 'X-Subscription-Token': key },
         timeout: 15000,
       });
@@ -316,14 +335,15 @@ async function runQuery(query, ctx, logger) {
   if (ctx.mode === 'braveApi') {
     const r = await searchBraveApi(query, logger);
     if (r.length) return r;
-    if (ctx.page) return searchKeyless(ctx.page, query, logger); // fallback
+    if (ctx.page) return searchKeyless(ctx.page, query, logger, ctx); // fallback
     return [];
   }
-  return ctx.page ? searchKeyless(ctx.page, query, logger) : [];
+  return ctx.page ? searchKeyless(ctx.page, query, logger, ctx) : [];
 }
 
 /** Collect up to 5 unique candidates across the multi-query ladder. */
 async function collectCandidates(person, ctx, logger) {
+  ctx.blocked = false; // reset per-person; set if the engines throttle us
   const pool = new Map();
   for (const query of buildQueries(person)) {
     let found = [];
@@ -410,6 +430,9 @@ function resultFromCache(rec) {
 }
 
 async function cacheResult(person, r) {
+  // Only cache resolved profiles. "Not Found" is often a transient failure
+  // (rate-limit, tab crash), so leaving it uncached lets the next run retry it.
+  if (!r.linkedin_url) return;
   await putCached({
     name: person.name,
     company: person.company,
@@ -581,6 +604,7 @@ export async function enrichPeople(people = [], opts = {}) {
   }
 
   let next = 0;
+  let blockStreak = 0; // consecutive lookups where the engines throttled us
   async function worker(wi) {
     const ctx = { mode: session.mode, page: session.pages[wi] || null, validate: session.validate };
     while (true) {
@@ -615,8 +639,21 @@ export async function enrichPeople(people = [], opts = {}) {
       done += 1;
       logger?.progress(progressFrom + Math.round((done / total) * (progressTo - progressFrom)), `Enriching ${done}/${total}`);
       logger?.info(`  ${person.name} → ${r.linkedin_url || 'not found'} (${r.confidence}%, ${r.status})`);
-      // Throttle the keyless path so we don't trip search-engine rate limits.
-      if (session.mode !== 'braveApi') await delay(900 + Math.floor(Math.random() * 900));
+
+      // Adaptive cooldown: when the free engines start throttling this IP
+      // (ctx.blocked set on challenge/connection errors), pause to let the limit
+      // reset and start a fresh browser session, instead of failing everyone left.
+      if (session.mode !== 'braveApi') {
+        if (ctx.blocked && !r.linkedin_url) blockStreak += 1;
+        else if (r.linkedin_url) blockStreak = 0;
+        if (blockStreak >= 4) {
+          logger?.warn('Search engines are rate-limiting — pausing 45s to recover…');
+          await delay(45000);
+          if (session.browser) ctx.page = await session.recreate(wi);
+          blockStreak = 0;
+        }
+        await delay(1200 + Math.floor(Math.random() * 1300));
+      }
     }
   }
 
@@ -657,6 +694,392 @@ export async function enrichSpeakers(speakers = [], opts = {}) {
     opts
   );
   return speakers.map((s, i) => ({ ...s, ...toSpeakerFields(results[i]) }));
+}
+
+// ---------------------------------------------------------------------------
+// X-ray search: query → list of LinkedIn profiles (name + designation + url)
+// ---------------------------------------------------------------------------
+
+/** Decode Google's `/url?q=<real>` result links. */
+function decodeGoogle(href) {
+  try {
+    const u = new URL(href, 'https://www.google.com');
+    if (u.pathname === '/url') return u.searchParams.get('q') || u.searchParams.get('url') || href;
+    return href;
+  } catch {
+    return href;
+  }
+}
+
+// Paginated engine URLs for collecting many results from one query. Google is
+// first because it's the only engine that does `site:linkedin.com/in` X-ray
+// searches well — it can challenge a heavy/datacenter IP, but usually works
+// fine for normal (residential) use, so the others remain as fallbacks.
+const PAGED_ENGINES = [
+  { name: 'Google', url: (q, p) => `https://www.google.com/search?q=${encodeURIComponent(q)}&num=20&start=${p * 10}&hl=en`, decode: decodeGoogle },
+  { name: 'Brave', url: (q, p) => `https://search.brave.com/search?q=${encodeURIComponent(q)}&offset=${p}`, decode: (h) => h },
+  { name: 'Bing', url: (q, p) => `https://www.bing.com/search?q=${encodeURIComponent(q)}&first=${p * 10 + 1}`, decode: decodeBingLike },
+  { name: 'Ecosia', url: (q, p) => `https://www.ecosia.org/search?q=${encodeURIComponent(q)}&p=${p}`, decode: decodeBingLike },
+];
+
+/** Parse a LinkedIn result title into { name, designation, company }. */
+export function parseProfileTitle(title) {
+  // "Name - Designation - Company | LinkedIn" / "Name - Designation at Company"
+  let t = clean(title).replace(/\s*[|–-]\s*LinkedIn.*$/i, '');
+  const parts = t.split(/\s+[-–|]\s+/).map((s) => clean(s)).filter(Boolean);
+  let name = parts[0] || '';
+  // Google/Bing sometimes inject UI labels as the leading segment.
+  if (/^(web results|results|more results|see more|people also|view\b|profiles)/i.test(name) || /linkedin/i.test(name)) {
+    name = '';
+  }
+  let designation = parts[1] || '';
+  let company = parts[2] || '';
+  if (!company && / at /i.test(designation)) {
+    const m = designation.match(/^(.*?)\s+at\s+(.+)$/i);
+    if (m) {
+      designation = clean(m[1]);
+      company = clean(m[2]);
+    }
+  }
+  return { name, designation, company };
+}
+
+// Two-way role aliases (CTO ↔ chief technology officer) for query expansion.
+const ROLE_ALIASES = (() => {
+  const m = {};
+  for (const [k, v] of Object.entries(ACRONYMS)) {
+    m[k] = v;
+    m[v] = k;
+  }
+  return m;
+})();
+
+/**
+ * Build a LinkedIn X-ray query from structured filters.
+ *   buildXrayQuery({ location:'Gurgaon', designations:['CTO','Talent Acquisition Head'], keywords:['summit'] })
+ *   -> site:linkedin.com/in ("CTO" OR "chief technology officer" OR "Talent Acquisition Head") "Gurgaon" ("summit")
+ */
+// Generate phrasing variants for a role so we match real-world headlines, e.g.
+// "Talent Acquisition Head" also matches "Head of Talent Acquisition" /
+// "Talent Acquisition Leader", and "CTO" matches "Chief Technology Officer".
+const SENIORITY = 'Head|Lead|Director|Manager|Officer|Leader|VP|President';
+function roleVariants(role) {
+  const t = clean(role);
+  if (!t) return [];
+  const out = new Set([`"${t}"`]);
+  const alias = ROLE_ALIASES[t.toLowerCase()];
+  if (alias) out.add(`"${alias}"`);
+  const m1 = t.match(new RegExp(`^(.*?)\\s+(${SENIORITY})$`, 'i')); // "X Head" → "Head of X", "Head X"
+  if (m1) {
+    out.add(`"${m1[2]} of ${m1[1]}"`);
+    out.add(`"${m1[2]} ${m1[1]}"`);
+  }
+  const m2 = t.match(new RegExp(`^(${SENIORITY})\\s+of\\s+(.+)$`, 'i')); // "Head of X" → "X Head"
+  if (m2) out.add(`"${m2[2]} ${m2[1]}"`);
+  const m3 = t.match(new RegExp(`^(${SENIORITY})\\s+(?!of\\b)(.+)$`, 'i')); // "Director X" → "Director of X", "X Director"
+  if (m3) {
+    out.add(`"${m3[1]} of ${m3[2]}"`);
+    out.add(`"${m3[2]} ${m3[1]}"`);
+  }
+
+  // Expand domain abbreviations both ways (L&D ↔ Learning & Development) so we
+  // match however the headline is written.
+  for (const v of [...out]) {
+    if (/l&d/i.test(v)) out.add(v.replace(/l&d/gi, 'Learning & Development'));
+    if (/learning\s*&\s*development/i.test(v)) out.add(v.replace(/learning\s*&\s*development/gi, 'Learning and Development'));
+    if (/learning and development/i.test(v)) out.add(v.replace(/learning and development/gi, 'L&D'));
+    if (/\bta\b/i.test(v)) out.add(v.replace(/\bTA\b/gi, 'Talent Acquisition'));
+  }
+  return [...out];
+}
+
+// Industry → search synonyms so "Healthcare" also matches hospital/pharma/etc.
+const INDUSTRY_SYNONYMS = {
+  healthcare: ['healthcare', 'hospital', 'pharma', 'pharmaceutical', 'medical', 'life sciences', 'biotech'],
+  'real estate': ['real estate', 'realty', 'property', 'proptech'],
+  fintech: ['fintech', 'financial services', 'banking', 'payments', 'lending', 'bfsi'],
+  insurance: ['insurance', 'insurtech'],
+  'it services': ['it services', 'information technology', 'software services', 'it consulting'],
+  saas: ['saas', 'software', 'b2b software', 'cloud'],
+  manufacturing: ['manufacturing', 'industrial', 'production'],
+  ecommerce: ['ecommerce', 'e-commerce', 'retail', 'd2c'],
+  edtech: ['edtech', 'education', 'e-learning'],
+  logistics: ['logistics', 'supply chain', 'freight', 'transportation'],
+  automotive: ['automotive', 'automobile', 'ev', 'mobility'],
+  telecom: ['telecom', 'telecommunications'],
+  energy: ['energy', 'power', 'renewable', 'oil and gas', 'solar'],
+  hospitality: ['hospitality', 'hotels', 'travel', 'tourism'],
+  media: ['media', 'advertising', 'entertainment'],
+  consulting: ['consulting', 'advisory', 'professional services'],
+  cybersecurity: ['cybersecurity', 'security', 'infosec'],
+  ai: ['artificial intelligence', 'machine learning', 'data science'],
+  fmcg: ['fmcg', 'consumer goods', 'cpg'],
+};
+
+function industryVariants(ind) {
+  const t = clean(ind);
+  if (!t) return [];
+  const syns = INDUSTRY_SYNONYMS[t.toLowerCase()] || [t];
+  return syns.map((s) => `"${s}"`);
+}
+
+export function buildXrayQuery({ location, locations = [], designations = [], industries = [], keywords = [] } = {}) {
+  const roles = [];
+  for (const d of designations) roles.push(...roleVariants(d));
+  const parts = ['site:linkedin.com/in'];
+  if (roles.length) parts.push(`(${[...new Set(roles)].join(' OR ')})`);
+
+  // One or more cities — OR them together so any match counts.
+  const locs = [...new Set([location, ...locations].map((l) => clean(l)).filter(Boolean))];
+  if (locs.length === 1) parts.push(`"${locs[0]}"`);
+  else if (locs.length > 1) parts.push(`(${locs.map((l) => `"${l}"`).join(' OR ')})`);
+
+  // Industry clause (expanded to synonyms).
+  const inds = [...new Set((industries || []).flatMap(industryVariants))];
+  if (inds.length) parts.push(`(${inds.join(' OR ')})`);
+
+  const kw = (keywords || []).map((k) => clean(k)).filter(Boolean);
+  if (kw.length) parts.push(`(${kw.map((k) => `"${k}"`).join(' OR ')})`);
+  return parts.join(' ');
+}
+
+// Seniority tiers (checked in order) with a heuristic decision-maker score.
+const SENIORITY_RULES = [
+  [/\b(chief|cxo|c[a-z]o|ceo|cto|cio|cmo|cfo|coo|chro|cpo|cdo|cgo|ciso)\b/i, 'C-Level', 95],
+  [/\b(founder|co-?founder|owner|proprietor|managing director|\bmd\b|partner)\b/i, 'Founder/MD', 92],
+  [/\b(president|vice president|svp|evp|avp|\bvp\b)\b/i, 'VP', 82],
+  [/\b(director|head|country head|business head|unit head|general manager|\bgm\b)\b/i, 'Director/Head', 70],
+  [/\b(manager|lead|principal|senior|specialist)\b/i, 'Manager/Lead', 48],
+];
+
+const DEPT_RULES = [
+  [/market|brand|growth|demand|advertis|communicat|\bpr\b/i, 'Marketing'],
+  [/tech|engineer|\bit\b|software|\bdata\b|\bai\b|\bml\b|cloud|security|cyber|information|developer/i, 'Technology'],
+  [/talent|recruit|\bhr\b|human resource|people|hiring/i, 'HR'],
+  [/sales|revenue|business development|\bbd\b|account exec/i, 'Sales'],
+  [/product/i, 'Product'],
+  [/financ|\bcfo\b|treasur|account/i, 'Finance'],
+  [/operation|\bcoo\b|supply|logistic/i, 'Operations'],
+  [/customer|\bcx\b|success|experience/i, 'Customer'],
+  [/strateg|innovation|transformation|digital/i, 'Strategy/Digital'],
+];
+
+// Titles that are NOT decision-makers (job-seekers, students, ex-roles).
+const JUNK_LEAD_RE = /\b(intern|internship|student|trainee|fresher|apprentice|aspiring|seeking|looking for|job ?seeker|unemployed|ex-|former|retired|freelanc)\b/i;
+
+/** Derive seniority, department and a heuristic decision-maker score from a title. */
+export function classifyLead(person) {
+  const title = clean(person.designation);
+  let seniority = 'Individual';
+  let score = title ? 30 : 20;
+  for (const [re, level, s] of SENIORITY_RULES) {
+    if (re.test(title)) { seniority = level; score = s; break; }
+  }
+  let department = 'General';
+  for (const [re, d] of DEPT_RULES) {
+    if (re.test(title)) { department = d; break; }
+  }
+  return {
+    seniority,
+    department,
+    decisionScore: score,
+    junk: JUNK_LEAD_RE.test(title) || JUNK_LEAD_RE.test(clean(person.name)),
+  };
+}
+
+/** If the input is a Google/Bing search URL, pull out the actual query (q=…). */
+export function extractQuery(input) {
+  const s = clean(input);
+  if (!/^https?:\/\//i.test(s)) return s;
+  try {
+    const u = new URL(s);
+    return clean(u.searchParams.get('q') || u.searchParams.get('query') || s);
+  } catch {
+    return s;
+  }
+}
+
+/**
+ * Run an X-ray search query and collect the LinkedIn profiles in the results.
+ * Returns [{ name, designation, company, url, snippet }] deduped by URL.
+ */
+export async function searchProfiles(rawQueries, opts = {}) {
+  const { logger, pages = 3, stats } = opts;
+  // Each query may be a plain string, or { query, tag } to label results with the
+  // company they came from (used by the per-company POC search).
+  const items = (Array.isArray(rawQueries) ? rawQueries : [rawQueries])
+    .map((q) => (typeof q === 'string' ? { query: extractQuery(q), tag: '' } : { query: extractQuery(q.query), tag: q.tag || '' }))
+    .filter((x) => x.query);
+  if (!items.length) return [];
+  const queries = items.map((i) => i.query);
+  const seen = new Map();
+  logger?.info(`Profile search: ${queries.length} query(ies) via ${process.env.BRAVE_API_KEY ? 'Brave Search API' : 'keyless browser search'}.`);
+
+  if (process.env.BRAVE_API_KEY) {
+    for (const { query, tag } of items) {
+      for (let off = 0; off < pages; off++) {
+        const found = await searchBraveApi(query, logger, { count: 20, offset: off });
+        if (!found.length) break;
+        for (const c of found) if (c.url && !seen.has(c.url)) seen.set(c.url, { ...c, source: 'Brave API', tag });
+      }
+    }
+  } else {
+    const browser = await launchBrowser(logger);
+    if (!browser) throw new Error('Search browser unavailable (Playwright not installed).');
+    const context = await browser.newContext({ userAgent: UA, viewport: { width: 1280, height: 900 } });
+    // Pre-accept Google's consent interstitial so result pages render directly.
+    await context.addCookies([
+      { name: 'CONSENT', value: 'YES+cb', domain: '.google.com', path: '/' },
+    ]).catch(() => {});
+    const page = await context.newPage();
+    try {
+      // For a single query, hit every engine and merge (maximize one search).
+      // For many queries (per city×role), use the first engine that answers each
+      // — the breadth comes from the queries, so we keep per-query load light.
+      const allEngines = queries.length === 1;
+      for (const { query, tag } of items) {
+        for (const engine of PAGED_ENGINES) {
+          let gotAny = false;
+          for (let p = 0; p < pages; p++) {
+            // One bad page must never crash the whole search — catch everything
+            // (navigation, parse) and just move on to the next engine/query.
+            try {
+              await gotoSafe(page, engine.url(query, p), { waitUntil: 'domcontentloaded', timeout: 25000 });
+              await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+              const html = await page.content();
+              // Detect an engine block/CAPTCHA (e.g. Google's tiny "sorry" page)
+              // so the caller can tell the user why results are thin.
+              if (looksLikeChallenge(html) || (engine.name === 'Google' && html.length < 15000 && !/linkedin\.com\/in\//i.test(html))) {
+                if (stats) stats.blocked = true;
+                logger?.warn(`${engine.name} is rate-limiting/CAPTCHA — skipping.`);
+                break;
+              }
+              const found = await parseResults(html, engine.decode);
+              const before = seen.size;
+              for (const c of found) if (!seen.has(c.url)) seen.set(c.url, { ...c, source: engine.name, tag });
+              const added = seen.size - before;
+              if (found.length) gotAny = true;
+              else if (p === 0) break; // engine empty for this query → next engine
+              // `site:` searches are truncated, so once a deeper page stops adding
+              // new profiles, stop paging (and avoid extra CAPTCHA risk).
+              if (p > 0 && added === 0) break;
+            } catch (err) {
+              logger?.warn(`${engine.name} page ${p + 1}: ${err.message.split('\n')[0]}`);
+              break;
+            }
+            await delay(900 + Math.floor(Math.random() * 700));
+          }
+          if (gotAny && !allEngines) break; // one engine is enough in multi-query mode
+        }
+        if (queries.length > 1) logger?.info(`  ${seen.size} profile(s) collected so far…`);
+      }
+    } finally {
+      await browser.close().catch(() => {});
+    }
+  }
+
+  const out = [...seen.values()].map((c) => {
+    const parsed = parseProfileTitle(c.title);
+    // If we searched for a specific company, trust that over the parsed company.
+    return { ...parsed, company: c.tag || parsed.company, url: c.url, snippet: c.snippet, source: c.source || 'Search' };
+  });
+  logger?.success(`Profile search found ${out.length} LinkedIn profile(s).`);
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// Post / event mining: from company + event + location searches, collect the
+// LinkedIn profiles that appear AND candidate names mentioned in the snippets.
+// ---------------------------------------------------------------------------
+
+/** Parse ALL organic result cards (not just linkedin/in) → {url, title, snippet}. */
+async function parseCards(html, decode) {
+  const { load } = await import('cheerio');
+  const $ = load(html);
+  const cards = [];
+  const seen = new Set();
+  $('div.g, div.tF2Cxc, div.MjjYud, li.b_algo, .snippet, .result, .w-gl__result, article').each((_, el) => {
+    const $c = $(el);
+    const url = decode($c.find('a[href]').first().attr('href') || '');
+    const title = clean($c.find('h3, h2, [class*="title"]').first().text());
+    const snippet = clean($c.find('.VwiC3b, .b_caption p, .snippet-description, [class*="description"], p').first().text());
+    const key = `${title}|${snippet}`.slice(0, 200);
+    if ((title || snippet) && !seen.has(key)) {
+      seen.add(key);
+      cards.push({ url, title, snippet });
+    }
+  });
+  return cards;
+}
+
+// A result looks like an event/speaker page (vs. a random article).
+const EVENT_URL_RE = /summit|conference|roundtable|forum|conclave|expo|10times|event|awards|symposium|meetup|webinar|agenda|speaker|panel|festival/i;
+const EVENT_SKIP_RE = /\/jobs?\b|indeed|naukri|glassdoor|wikipedia|youtube\.com\/watch|amazon\.|flipkart/i;
+
+/**
+ * Find events (summits/roundtables/conferences) and the leads on them.
+ * Returns:
+ *   events   — event/speaker pages found ({ title, url, snippet }) — scrape these
+ *              with the Scraper to pull full speaker lists.
+ *   profiles — linkedin.com/in profiles that appeared in the results (direct leads)
+ */
+export async function findEvents(queries, opts = {}) {
+  const { logger, pages = 2, stats } = opts;
+  const qs = (Array.isArray(queries) ? queries : [queries]).map(extractQuery).filter(Boolean);
+  if (!qs.length) return { events: [], profiles: [] };
+
+  const eventMap = new Map();
+  const profileMap = new Map();
+  const browser = await launchBrowser(logger);
+  if (!browser) throw new Error('Search browser unavailable (Playwright not installed).');
+  const context = await browser.newContext({ userAgent: UA, viewport: { width: 1280, height: 900 } });
+  await context.addCookies([{ name: 'CONSENT', value: 'YES+cb', domain: '.google.com', path: '/' }]).catch(() => {});
+  const page = await context.newPage();
+  try {
+    for (const query of qs) {
+      for (const engine of PAGED_ENGINES) {
+        let gotAny = false;
+        for (let p = 0; p < pages; p++) {
+          try {
+            await gotoSafe(page, engine.url(query, p), { waitUntil: 'domcontentloaded', timeout: 25000 });
+            await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+            const html = await page.content();
+            if (looksLikeChallenge(html) || (engine.name === 'Google' && html.length < 15000 && !/http/i.test(html))) {
+              if (stats) stats.blocked = true;
+              break;
+            }
+            const cards = await parseCards(html, engine.decode);
+            if (!cards.length && p === 0) break;
+            let added = 0;
+            for (const card of cards) {
+              const profileUrl = cleanProfileUrl(card.url);
+              if (profileUrl) {
+                if (!profileMap.has(profileUrl)) {
+                  const { name, designation, company } = parseProfileTitle(card.title);
+                  if (name) { profileMap.set(profileUrl, { name, designation, company, url: profileUrl }); added++; }
+                }
+              } else if (card.url && /^https?:/i.test(card.url) && EVENT_URL_RE.test(`${card.url} ${card.title}`) && !EVENT_SKIP_RE.test(card.url)) {
+                const key = card.url.split(/[?#]/)[0];
+                if (!eventMap.has(key)) { eventMap.set(key, { title: card.title, url: card.url, snippet: card.snippet }); added++; }
+              }
+            }
+            if (added) gotAny = true;
+            else if (p > 0) break;
+            await delay(900 + Math.floor(Math.random() * 700));
+          } catch (err) {
+            logger?.warn(`${engine.name} p${p + 1}: ${err.message.split('\n')[0]}`);
+            break;
+          }
+        }
+        if (gotAny) break; // one engine per query
+      }
+      logger?.info(`  ${eventMap.size} event(s), ${profileMap.size} profile(s) so far…`);
+    }
+  } finally {
+    await browser.close().catch(() => {});
+  }
+  logger?.success(`Event search: ${eventMap.size} events, ${profileMap.size} profiles.`);
+  return { events: [...eventMap.values()], profiles: [...profileMap.values()] };
 }
 
 /** Field patch for a manually entered/cleared LinkedIn URL (human-confirmed). */

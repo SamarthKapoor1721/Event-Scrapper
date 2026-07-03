@@ -1,216 +1,24 @@
 {
   "meta": {
-    "event": "annual conclave ",
+    "event": null,
     "year": "2025",
     "urls": [
-      "https://hr.economictimes.indiatimes.com/annual-conclave2025"
+      "https://hr.economictimes.indiatimes.com/future-forward-hyderabad/interviews?dispType=13&tags=&cmpnyMdlNm=Previous%20Edition%20Our%20Speakers&comment_id=18289"
     ],
     "engines": [
       "playwright"
     ],
-    "confidence": 1,
-    "scrapedAt": "2026-06-24T05:56:46.278Z",
+    "confidence": 0.85,
+    "scrapedAt": "2026-07-01T12:59:56.078Z",
     "linkedinEnriched": true,
-    "count": 33
+    "count": 1
   },
   "companies": [
-    {
-      "company": "Presenting Partner",
-      "category": "",
-      "website": "https://www.cornerstoneondemand.com/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_1752149748_CSOD_LOGO_for_LinKedIn.jpeg"
-    },
     {
       "company": "hr",
       "category": "",
       "website": "https://hr.economictimes.indiatimes.com/",
-      "logoUrl": "https://st.etb2bimg.com/Themes/Release/theme4/images/logos/hr-logo-mobile-header.svg?mod=3360"
-    },
-    {
-      "company": "Cornerstone",
-      "category": "Presenting Partner",
-      "website": "https://www.cornerstoneondemand.com/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_1752149748_CSOD_LOGO_for_LinKedIn.jpeg"
-    },
-    {
-      "company": "TurboHire",
-      "category": "Presenting Partner",
-      "website": "https://turbohire.co/?utm_source=direct&utm_medium=et-event-page&utm_campaign=et-chro-conclave-2025",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_1755155436199_TurboHire_Logo_For_Light_Background.png"
-    },
-    {
-      "company": "flipspaces",
-      "category": "Powered By",
-      "website": "https://www.flipspaces.com/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_175644657814_file_17563767122418_file_17562260458718_Flipspace_Logo_black_1_1_.png"
-    },
-    {
-      "company": "SDA Bocconi",
-      "category": "Powered By",
-      "website": "https://sdabocconiasiacenter.com/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17564632090748_SDA_Bocconi_AC_Logo_1_.png"
-    },
-    {
-      "company": "Adrenalin",
-      "category": "Talent Transformation Partner",
-      "website": "https://www.myadrenalin.com/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17555043737834_Adrenalin_Corporate_Logo_1_2_.png"
-    },
-    {
-      "company": "PeopleStrong",
-      "category": "Asia's Choice of HR Tech Partner",
-      "website": "https://www.peoplestrong.com/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17558512854176_PeopleStrong_Logo_7_.png"
-    },
-    {
-      "company": "Ripplehire",
-      "category": "Agentic AI ATS Partner",
-      "website": "https://www.ripplehire.com/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17563608197474_RippleHire_Logo_01.png"
-    },
-    {
-      "company": "Enthral",
-      "category": "Gold Partners",
-      "website": "https://www.enthral.ai/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17557491314309_Enthral_Logo_Horizontal_color.png"
-    },
-    {
-      "company": "Shework",
-      "category": "Gold Partners",
-      "website": "https://www.shework.in/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_1756791566118_Shework_Logo_New_1_.png"
-    },
-    {
-      "company": "Ishwa Consulting",
-      "category": "Supporting Partners",
-      "website": "https://hr.economictimes.indiatimes.com/annual-conclave",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17557492769414_1_updated_Ishwa_Logo_1_.png"
-    },
-    {
-      "company": "Michaelpage",
-      "category": "Supporting Partners",
-      "website": "https://michaelpage.co.in/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_1752150211_MP_Logo_Colour_Non_Stacked_JPG.jpg"
-    },
-    {
-      "company": "Red Health",
-      "category": "Supporting Partners",
-      "website": "https://www.red.health/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_1752561146_red_health_logo_1_1_.png"
-    },
-    {
-      "company": "ENLINK",
-      "category": "Supporting Partners",
-      "website": "https://enlinkit.com/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_1752645175_Enlink_Logo.png"
-    },
-    {
-      "company": "omtrax",
-      "category": "Supporting Partners",
-      "website": "https://www.omtrax.com/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_1752820036_OmTrax_Logo.png"
-    },
-    {
-      "company": "Digiverifier",
-      "category": "Supporting Partners",
-      "website": "https://www.digiverifier.com/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_1753257387_Digiverifier_Logo_2_.png"
-    },
-    {
-      "company": "EQuip",
-      "category": "Supporting Partners",
-      "website": "https://equip.co/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17536996964123_logo_h.png"
-    },
-    {
-      "company": "Neeyamo",
-      "category": "Supporting Partners",
-      "website": "https://www.neeyamo.com/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17538557399253_Registered_Logo_Color_2_1_.png"
-    },
-    {
-      "company": "lancesoft",
-      "category": "Supporting Partners",
-      "website": "https://www.lancesoft.com/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17557723866768_lancesoft_logo_1_1_1_1_1_.png"
-    },
-    {
-      "company": "Matrix",
-      "category": "Supporting Partners",
-      "website": "https://www.matrixbsindia.com/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17558415697656_Logo_Matrix_uds_1_1_.png"
-    },
-    {
-      "company": "1tohelp",
-      "category": "Supporting Partners",
-      "website": "https://www.1to1help.com/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17561001304577_1to1_Logo_Vertical_PNG_2_1_.png"
-    },
-    {
-      "company": "Blue Tree",
-      "category": "Supporting Partners",
-      "website": "https://bluetree.in/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17561946164214_Bluetree_Logo_transprent_1_.png"
-    },
-    {
-      "company": "Workaholucpro",
-      "category": "Supporting Partners",
-      "website": "http://www.workaholicpro.com/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17562952074708_Branding_Files_1_.png"
-    },
-    {
-      "company": "Xoxoday",
-      "category": "Supporting Partners",
-      "website": "https://www.xoxoday.com/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17562952930782_Xoxoday_Logo.png"
-    },
-    {
-      "company": "Interview God",
-      "category": "Supporting Partners",
-      "website": "https://www.interviewgod.ai/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17562955027764_InterviewGod_logo_1_.png"
-    },
-    {
-      "company": "Hunar Ai",
-      "category": "Supporting Partners",
-      "website": "https://www.hunar.ai/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17563822314339_hunarlogo.png"
-    },
-    {
-      "company": "Oraneconsulting",
-      "category": "Supporting Partners",
-      "website": "https://www.oraneconsulting.com/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_1756382441062_Orane_Logo_1_1_1_.png"
-    },
-    {
-      "company": "Charusat",
-      "category": "Supporting Partners",
-      "website": "https://www.charusat.ac.in/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17563826274505_Charusat_Logo.png"
-    },
-    {
-      "company": "Writer Relocations",
-      "category": "Supporting Partners",
-      "website": "https://www.writercorporation.com/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_1756714603004_Writer_Relocations_final_logo_1_1_1_.png"
-    },
-    {
-      "company": "UKG",
-      "category": "Supporting Partners",
-      "website": "http://ukg.in/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17567149365522_UKG_logo_rgb_1_.png"
-    },
-    {
-      "company": "Mediwheel",
-      "category": "Supporting Partners",
-      "website": "https://mediwheel.in/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17567233233522_Logo_Mediwheel_2_.png"
-    },
-    {
-      "company": "Alldigi Tech",
-      "category": "Supporting Partners",
-      "website": "http://www.alldigitech.com/",
-      "logoUrl": "https://img.etb2bimg.com/files/retail_files/file_17567242848877_Alldigi_logo_2x.png"
+      "logoUrl": "https://st.etb2bimg.com/Themes/Release/theme4/images/logos/hr-logo-mobile-header.svg?mod=3369"
     }
   ]
 }

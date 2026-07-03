@@ -30,6 +30,10 @@ async function del(path) {
 export const api = {
   scrape: (payload) => postJson('/scrape', payload),
   enrichBatch: (payload) => postJson('/enrich/batch', payload),
+  searchProfiles: (payload) => postJson('/search-profiles', payload),
+  minePosts: (payload) => postJson('/mine-posts', payload),
+  findEvents: (payload) => postJson('/find-events', payload),
+  dedupe: (payload) => postJson('/dedupe', payload),
   generateExcel: (payload) => postJson('/generate-excel', payload),
   compare: (payload) => postJson('/compare', payload),
   exportData: (payload) => postJson('/export', payload),
