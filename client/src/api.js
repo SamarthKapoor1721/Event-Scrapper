@@ -34,6 +34,7 @@ export const api = {
   minePosts: (payload) => postJson('/mine-posts', payload),
   findEvents: (payload) => postJson('/find-events', payload),
   dedupe: (payload) => postJson('/dedupe', payload),
+  subtractLists: (payload) => postJson('/subtract-lists', payload),
   generateExcel: (payload) => postJson('/generate-excel', payload),
   compare: (payload) => postJson('/compare', payload),
   exportData: (payload) => postJson('/export', payload),

@@ -19,7 +19,10 @@ const ROLE_PRESETS = [
   'Campus Recruitment Head', 'Chief People Officer',
   'L&D Head', 'Head of L&D', 'VP L&D', 'L&D Director', 'Chief Learning Officer',
   'Head of Learning', 'Training Head', 'Capability Development Head', 'Head of OD',
-  'CMO', 'Marketing Director', 'Head of Communications', 'Head of Brand',
+  'CMO', 'Chief Growth Officer', 'Head of Marketing', 'VP Marketing', 'Marketing Director',
+  'Head of Digital Marketing', 'Head of Growth', 'Head of Brand', 'Brand Director',
+  'Head of Product Marketing', 'Head of Demand Generation', 'Head of Performance Marketing',
+  'Head of Content', 'Head of Communications', 'Head of Social Media', 'Marketing Manager',
   'CTO', 'CIO', 'VP Engineering', 'Head of Product',
   'CEO', 'CFO', 'COO', 'VP Sales', 'Head of Procurement',
 ];
@@ -242,7 +245,7 @@ function Picker({ label, options, values, setValues, placeholder, addPlaceholder
           {values.map((v) => (
             <span
               key={v}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-2.5 py-1 text-xs font-semibold text-white"
+              className="inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-2.5 py-1 text-xs font-semibold text-white dark:bg-indigo-500"
             >
               {v}
               <button type="button" onClick={() => remove(v)} className="text-white/80 hover:text-white" title={`Remove ${v}`}>

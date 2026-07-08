@@ -992,6 +992,30 @@ export async function searchProfiles(rawQueries, opts = {}) {
 // LinkedIn profiles that appear AND candidate names mentioned in the snippets.
 // ---------------------------------------------------------------------------
 
+// The search engines' own hosts — never a real result destination.
+const ENGINE_HOST_RE = /(^|\.)(google|bing|ecosia|brave|duckduckgo|startpage|yahoo|msn)\.[a-z.]+$/i;
+
+/** Resolve a result anchor to its real external URL (decoding engine redirects). */
+function resolveExternalUrl(href, decode) {
+  let u = decode(href || '');
+  try {
+    const url = new URL(u, 'https://x.invalid');
+    // Still on the engine's own host? Pull the destination out of a redirect param.
+    if (ENGINE_HOST_RE.test(url.hostname)) {
+      const enc = url.searchParams.get('url') || url.searchParams.get('u') || url.searchParams.get('q') || url.searchParams.get('uddg') || '';
+      if (enc) {
+        const dec = enc.startsWith('a1')
+          ? Buffer.from(enc.slice(2).replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8')
+          : decodeURIComponent(enc);
+        if (/^https?:\/\//i.test(dec)) u = dec;
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return u;
+}
+
 /** Parse ALL organic result cards (not just linkedin/in) → {url, title, snippet}. */
 async function parseCards(html, decode) {
   const { load } = await import('cheerio');
@@ -1000,11 +1024,23 @@ async function parseCards(html, decode) {
   const seen = new Set();
   $('div.g, div.tF2Cxc, div.MjjYud, li.b_algo, .snippet, .result, .w-gl__result, article').each((_, el) => {
     const $c = $(el);
-    const url = decode($c.find('a[href]').first().attr('href') || '');
+    // Pick the first anchor that resolves to an EXTERNAL result (not the engine's
+    // own domain) — otherwise we'd store ecosia.org/bing.com internal links.
+    let url = '';
+    $c.find('a[href]').each((_, a) => {
+      if (url) return;
+      const resolved = resolveExternalUrl($(a).attr('href') || '', decode);
+      try {
+        const h = new URL(resolved, 'https://x.invalid');
+        if (/^https?:$/.test(h.protocol) && h.hostname !== 'x.invalid' && !ENGINE_HOST_RE.test(h.hostname)) url = resolved;
+      } catch {
+        /* skip */
+      }
+    });
     const title = clean($c.find('h3, h2, [class*="title"]').first().text());
     const snippet = clean($c.find('.VwiC3b, .b_caption p, .snippet-description, [class*="description"], p').first().text());
     const key = `${title}|${snippet}`.slice(0, 200);
-    if ((title || snippet) && !seen.has(key)) {
+    if (url && (title || snippet) && !seen.has(key)) {
       seen.add(key);
       cards.push({ url, title, snippet });
     }

@@ -23,7 +23,7 @@ export default function ResultsTable({ result, onEditLinkedIn }) {
             onClick={() => setTab(key)}
             className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition ${
               tab === key
-                ? 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-sm shadow-indigo-500/20'
+                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/20 dark:bg-indigo-500'
                 : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5'
             }`}
           >

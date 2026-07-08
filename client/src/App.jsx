@@ -12,6 +12,7 @@ import FindPeoplePanel from './components/FindPeoplePanel';
 import DedupePanel from './components/DedupePanel';
 import PostMinerPanel from './components/PostMinerPanel';
 import EventFinderPanel from './components/EventFinderPanel';
+import CleanListPanel from './components/CleanListPanel';
 
 const DEFAULT_FORM = {
   event: 'Global Fintech Fest',
@@ -234,26 +235,30 @@ export default function App() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/70 backdrop-blur-xl dark:border-white/10 dark:bg-slate-950/60">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <div className="flex items-center gap-5">
-            <h1 className="text-lg font-extrabold leading-tight tracking-tight">
-              Event <span className="gradient-text">Scraper</span>
+      <header className="sticky top-4 z-50 mx-auto max-w-5xl rounded-[1.5rem] border border-white/40 bg-white/60 px-2 py-2 shadow-[0_8px_30px_rgb(0,0,0,0.06)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/60 dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)]">
+        <div className="flex items-center justify-between px-3">
+          <div className="flex items-center gap-6">
+            <h1 className="flex items-center gap-1.5 text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
+              <svg className="h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              Event<span className="gradient-text font-extrabold">Scout</span>
             </h1>
-            <nav className="flex gap-1 rounded-xl bg-slate-100 p-1 dark:bg-white/5">
+            <nav className="hidden items-center gap-1.5 rounded-2xl bg-white/50 p-1.5 shadow-sm dark:bg-black/20 md:flex">
               {[
                 ['scraper', 'Scraper'],
                 ['people', 'Find People'],
                 ['posts', 'Company POCs'],
                 ['events', 'Event Finder'],
+                ['clean', 'Dedupe'],
               ].map(([key, label]) => (
                 <button
                   key={key}
                   onClick={() => setView(key)}
-                  className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${
+                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-300 ${
                     view === key
-                      ? 'bg-white text-indigo-600 shadow-sm dark:bg-white/10 dark:text-indigo-300'
-                      : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                      ? 'bg-white text-indigo-600 shadow-md dark:bg-indigo-500/20 dark:text-indigo-300'
+                      : 'text-slate-500 hover:bg-white/40 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-200'
                   }`}
                 >
                   {label}
@@ -263,10 +268,18 @@ export default function App() {
           </div>
           <button
             onClick={() => setDark((d) => !d)}
-            className="rounded-xl border border-slate-200 bg-white/60 px-3.5 py-1.5 text-sm font-medium transition hover:bg-white dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+            className="flex items-center justify-center rounded-xl bg-white/50 p-2.5 text-slate-600 shadow-sm transition hover:bg-white hover:text-indigo-600 dark:bg-black/20 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-indigo-400"
             title="Toggle dark mode"
           >
-            {dark ? 'Light' : 'Dark'}
+            {dark ? (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            ) : (
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+            )}
           </button>
         </div>
       </header>
@@ -283,6 +296,10 @@ export default function App() {
       ) : view === 'events' ? (
         <main className="mx-auto max-w-6xl px-4 py-7">
           <EventFinderPanel onScrapeEvent={handleScrapeEvent} />
+        </main>
+      ) : view === 'clean' ? (
+        <main className="mx-auto max-w-6xl px-4 py-7">
+          <CleanListPanel />
         </main>
       ) : (
       <main className="mx-auto max-w-6xl space-y-5 px-4 py-7">

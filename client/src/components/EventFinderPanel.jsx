@@ -12,6 +12,7 @@ export default function EventFinderPanel({ onScrapeEvent }) {
   const [topics, setTopics] = useState(['CIO']);
   const [inds, setInds] = useState([]);
   const [location, setLocation] = useState('India');
+  const [year, setYear] = useState('');
   const [pages, setPages] = useState(2);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -24,7 +25,7 @@ export default function EventFinderPanel({ onScrapeEvent }) {
     if (!topics.length && !inds.length) return setError('Add at least one role/topic or industry.');
     setBusy(true);
     try {
-      const data = await api.findEvents({ designations: topics, industries: inds, location: location.trim(), pages: Number(pages) || 2 });
+      const data = await api.findEvents({ designations: topics, industries: inds, location: location.trim(), year: year.trim(), pages: Number(pages) || 2 });
       setResult(data);
       setTab((data.events?.length ? 'events' : 'profiles'));
     } catch (err) {
@@ -51,10 +52,16 @@ export default function EventFinderPanel({ onScrapeEvent }) {
               <span className="field-label">Location</span>
               <input className="input" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="India, Gurugram, Mumbai…" />
             </label>
-            <label className="block">
-              <span className="field-label">Result pages (1–2 best)</span>
-              <input type="number" min="1" max="3" className="input" value={pages} onChange={(e) => setPages(e.target.value)} />
-            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="field-label">Year (optional)</span>
+                <input className="input" value={year} onChange={(e) => setYear(e.target.value)} placeholder="2024" />
+              </label>
+              <label className="block">
+                <span className="field-label">Pages (1–2)</span>
+                <input type="number" min="1" max="3" className="input" value={pages} onChange={(e) => setPages(e.target.value)} />
+              </label>
+            </div>
           </div>
         </div>
 
@@ -87,7 +94,7 @@ export default function EventFinderPanel({ onScrapeEvent }) {
               <button
                 key={key}
                 onClick={() => setTab(key)}
-                className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition ${tab === key ? 'bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5'}`}
+                className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition ${tab === key ? 'bg-indigo-600 text-white shadow-sm dark:bg-indigo-500' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5'}`}
               >
                 {label}
               </button>
@@ -184,7 +191,7 @@ function Picker({ label, options, values, setValues, placeholder, addPlaceholder
       {values.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5">
           {values.map((v) => (
-            <span key={v} className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 px-2.5 py-1 text-xs font-semibold text-white">
+            <span key={v} className="inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-2.5 py-1 text-xs font-semibold text-white dark:bg-indigo-500">
               {v}
               <button type="button" onClick={() => setValues(values.filter((x) => x !== v))} className="text-white/80 hover:text-white">×</button>
             </span>

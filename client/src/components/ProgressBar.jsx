@@ -13,8 +13,8 @@ export default function ProgressBar({ percent = 0, label, active }) {
         <div
           className={`h-full rounded-full transition-all duration-500 ease-out ${
             done
-              ? 'bg-gradient-to-r from-emerald-500 to-teal-500'
-              : `bg-gradient-to-r from-indigo-500 to-violet-500 ${active ? 'bar-stripes' : ''}`
+              ? 'bg-emerald-500'
+              : `bg-indigo-500 ${active ? 'bar-stripes' : ''}`
           }`}
           style={{ width: `${Math.max(2, percent)}%` }}
         />

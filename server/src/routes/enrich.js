@@ -139,9 +139,10 @@ router.post('/search-profiles', async (req, res) => {
     let combos = [];
     for (const c of cities) for (const r of roles) combos.push(buildXrayQuery({ location: c, designations: r ? [r] : [], industries: industryList, keywords }));
     combos = [...new Set(combos)];
-    // Keep the request load sane: if there are too many combinations, group the
-    // roles back into one OR clause per city instead.
-    queries = combos.length > 15 ? cities.map((c) => buildXrayQuery({ location: c, designations: roleList, industries: industryList, keywords })) : combos;
+    // Search every city × role combination separately (max coverage). Only if
+    // there are a lot do we group roles into one OR clause per city to keep the
+    // request count from tripping the search-engine CAPTCHA.
+    queries = combos.length > 24 ? cities.map((c) => buildXrayQuery({ location: c, designations: roleList, industries: industryList, keywords })) : combos;
     label = `${queries.length} search(es)${cityList.length ? ` · cities: ${cityList.join(', ')}` : ''}`;
   }
   if (!queries.length) {
@@ -267,21 +268,22 @@ const EVENT_FORMATS = ['Summit', 'Conference', 'Roundtable', 'Forum', 'Conclave'
  * the LinkedIn profiles that appear in the results.
  */
 router.post('/find-events', async (req, res) => {
-  const { designations, topics, location, industries, pages, jobId: clientJobId } = req.body || {};
+  const { designations, topics, location, industries, year, pages, jobId: clientJobId } = req.body || {};
   const topicList = [...(Array.isArray(designations) ? designations : []), ...(Array.isArray(topics) ? topics : [])]
     .map((t) => clean(t)).filter(Boolean);
   const loc = clean(location);
+  const yr = clean(year).match(/\b(19|20)\d{2}\b/)?.[0] || '';
   const indList = (Array.isArray(industries) ? industries : []).map((i) => clean(i)).filter(Boolean);
   if (!topicList.length && !indList.length) {
     return res.status(400).json({ error: 'Add at least one designation/topic or industry.' });
   }
 
-  // For each topic/industry, search event-format phrasings + location.
+  // For each topic/industry, search event-format phrasings + location (+ year).
   const subjects = topicList.length ? topicList : indList;
   const formatClause = `(${EVENT_FORMATS.map((f) => `"${f}"`).join(' OR ')})`;
   const queries = subjects.map((s) => {
     const ind = indList.length && topicList.length ? ` (${indList.map((i) => `"${i}"`).join(' OR ')})` : '';
-    return `"${s}" ${formatClause}${loc ? ` "${loc}"` : ''}${ind}`.trim();
+    return `"${s}" ${formatClause}${loc ? ` "${loc}"` : ''}${ind}${yr ? ` ${yr}` : ''}`.trim();
   });
 
   const jobId = clientJobId || randomUUID();
@@ -367,6 +369,105 @@ function dedupeRows(rows, by = 'auto') {
   const keyByLabel = mode === 'linkedin' ? (urlCol || 'LinkedIn URL') : mode === 'name_company' ? `${nameCol || 'Name'} + ${compCol || 'Company'}` : nameCol || 'Name';
   return { rows: out, removed, headers, keyBy: keyByLabel };
 }
+
+/** Resolve 'auto' → a concrete match mode from a set of headers. */
+function resolveMode(headers, by) {
+  if (by && by !== 'auto') return by;
+  const find = (re) => headers.find((h) => re.test(h));
+  return find(/linkedin|profile.*url|^url$/i) ? 'linkedin' : find(/name/i) ? 'name_company' : 'name';
+}
+
+/** Build a keyer for a given header set + explicit mode (keys are comparable across files). */
+function makeKeyer(headers, mode) {
+  const find = (re) => headers.find((h) => re.test(h));
+  const urlCol = find(/linkedin|profile.*url|^url$/i);
+  const nameCol = find(/name/i);
+  const compCol = find(/company|organi[sz]ation|employer/i);
+  const keyFn = (r) => {
+    if (mode === 'linkedin' && urlCol && clean(r[urlCol])) return `u:${normLinkedinUrl(r[urlCol])}`;
+    if ((mode === 'name_company' || mode === 'name') && nameCol) {
+      const n = normalizeName(r[nameCol]);
+      if (!n) return '';
+      return mode === 'name_company' && compCol ? `n:${n}|${normalizeCompany(r[compCol])}` : `n:${n}`;
+    }
+    return '';
+  };
+  const keyBy = mode === 'linkedin' ? (urlCol || 'LinkedIn URL') : mode === 'name_company' ? `${nameCol || 'Name'} + ${compCol || 'Company'}` : nameCol || 'Name';
+  return { keyFn, keyBy };
+}
+
+/** Turn a file payload ({ rows } | { fileBase64 } | { csv/tsv text }) into rows. */
+function payloadToRows(p) {
+  if (!p) return [];
+  if (Array.isArray(p.rows)) return p.rows;
+  try {
+    if (typeof p.fileBase64 === 'string' && p.fileBase64) {
+      const wb = XLSX.read(p.fileBase64, { type: 'base64' });
+      return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+    }
+    if (typeof p.csv === 'string' && p.csv.trim()) {
+      const wb = XLSX.read(p.csv, { type: 'string' });
+      return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+    }
+  } catch {
+    /* unreadable file → no rows */
+  }
+  return [];
+}
+
+/**
+ * POST /api/subtract-lists
+ * Body: { master: [payload], incoming: [payload], by? }
+ * Returns the incoming rows that are NOT already in the master list(s), also
+ * deduped among themselves. Preserves the incoming columns. Accepts CSV / XLSX /
+ * XLS / JSON (as rows) across any number of files per side.
+ */
+router.post('/subtract-lists', async (req, res) => {
+  const { master = [], incoming = [], by = 'auto' } = req.body || {};
+  const masterRows = (Array.isArray(master) ? master : []).flatMap(payloadToRows);
+  const incomingRows = (Array.isArray(incoming) ? incoming : []).flatMap(payloadToRows);
+  if (!incomingRows.length) {
+    return res.status(400).json({ error: 'Upload at least one new/incoming file with rows.' });
+  }
+
+  const headers = Object.keys(incomingRows[0]);
+  const mode = resolveMode([...headers, ...(masterRows[0] ? Object.keys(masterRows[0]) : [])], by);
+  const masterKeyer = makeKeyer(masterRows[0] ? Object.keys(masterRows[0]) : [], mode);
+  const incKeyer = makeKeyer(headers, mode);
+
+  const masterSet = new Set();
+  for (const r of masterRows) { const k = masterKeyer.keyFn(r); if (k) masterSet.add(k); }
+
+  const seen = new Set();
+  const kept = [];
+  let removedMaster = 0;
+  let removedDup = 0;
+  for (const r of incomingRows) {
+    const k = incKeyer.keyFn(r);
+    if (k && masterSet.has(k)) { removedMaster += 1; continue; }
+    if (k && seen.has(k)) { removedDup += 1; continue; }
+    if (k) seen.add(k);
+    kept.push(r);
+  }
+
+  const stamp = Date.now();
+  const xlsx = `new_unique_${stamp}.xlsx`;
+  const csv = `new_unique_${stamp}.csv`;
+  await saveOutput(xlsx, await buildRowsWorkbook(kept, 'New Unique', headers));
+  await saveOutput(csv, Buffer.from(toCsv(kept, headers)));
+
+  res.json({
+    masterCount: masterRows.length,
+    incomingCount: incomingRows.length,
+    kept: kept.length,
+    removedMaster,
+    removedDup,
+    keyBy: incKeyer.keyBy,
+    rows: kept.slice(0, 500),
+    downloadUrl: `/api/download/${xlsx}`,
+    csvUrl: `/api/download/${csv}`,
+  });
+});
 
 /**
  * POST /api/dedupe

@@ -31,7 +31,7 @@ export default function ScrapeForm({ form, setForm, busy, onScrape, onGenerateEx
       </p>
 
       {/* LinkedIn enrichment — highlighted primary feature. */}
-      <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-indigo-200/60 bg-gradient-to-br from-indigo-50/70 to-violet-50/50 p-3.5 transition hover:border-indigo-300 dark:border-indigo-500/20 dark:from-indigo-500/10 dark:to-violet-500/5">
+      <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-indigo-200/60 bg-indigo-50/70 p-3.5 transition hover:border-indigo-300 dark:border-indigo-500/20 dark:bg-indigo-500/10">
         <input
           type="checkbox"
           className="mt-0.5 h-4 w-4 accent-indigo-600"
