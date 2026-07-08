@@ -1,18 +1,24 @@
-# Conference Speaker & Company Scraping Platform
+# EventScout (Conference Scraper Platform)
 
-A production-quality full-stack app to scrape conference websites (built for
-**Global Fintech Fest**, reusable for any event), extract **speakers** and
-**companies**, generate **Excel** reports, and **compare data across years** —
-with live logs, dark mode, and an optional AI fallback. No authentication.
+A production-quality full-stack app to discover events, scrape attendees, and manage conference data.
 
-```
+## Features
+
+- **🌐 Conference Scraper**: Scrape event websites to extract speakers and companies. Supports whole-site crawling, custom CSS selectors, and an optional AI fallback for tough websites.
+- **🔍 Find People & LinkedIn Enrichment**: Automatically find LinkedIn profiles for extracted speakers using intelligent fuzzy matching and keyless browser searches.
+- **🏢 Company POCs (Post Miner)**: Mine company posts to find points of contact and key personnel.
+- **📅 Event Finder**: Discover related events and conferences to source new leads, with 1-click scraping.
+- **🧹 Dedupe & Clean List**: A list subtraction utility for contact management. Compare and clean lists to avoid duplicates.
+- **📊 Export & Compare**: Generate Excel (`.xlsx`), CSV, or JSON reports. Compare scraped data across years to find recurring attendees vs missing ones.
+- **✨ Premium UI**: Fast, responsive React UI with dark mode, live Server-Sent Event (SSE) logs, and a polished modern aesthetic.
+
+```text
 ┌────────────┐   POST /scrape (SSE logs)   ┌─────────────────────────────┐
 │  React UI  │ ──────────────────────────▶ │  Express API                │
-│  (Vite +   │ ◀────────────────────────── │   scraper → parse →         │
-│  Tailwind) │   speakers/companies/excel  │   normalize → compare →     │
-└────────────┘                             │   export (xlsx/csv/json)    │
+│  (Vite)    │ ◀────────────────────────── │   scraper → parse →         │
+└────────────┘   speakers/companies/excel  │   normalize → compare →     │
+                                           │   export (xlsx/csv/json)    │
                                            └─────────────────────────────┘
-                                              Playwright → Puppeteer → Axios
 ```
 
 ## Quick start
