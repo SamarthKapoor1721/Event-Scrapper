@@ -40,8 +40,8 @@ export default function DedupePanel() {
 
   return (
     <div className="card animate-fade-up p-5 sm:p-6">
-      <h2 className="text-lg font-bold">Remove Duplicates from a Sheet</h2>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+      <h2 className="card-title text-[15px]">Remove Duplicates from a Sheet</h2>
+      <p className="mt-1 text-sm text-dim">
         Upload a CSV or Excel file and download a cleaned copy with duplicate rows removed.
       </p>
 
@@ -52,7 +52,7 @@ export default function DedupePanel() {
             type="file"
             accept=".csv,.xlsx,.xls,text/csv"
             onChange={(e) => setFile(e.target.files?.[0] || null)}
-            className="block text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-indigo-500"
+            className="file-input"
           />
         </label>
         <label className="block">
@@ -69,14 +69,14 @@ export default function DedupePanel() {
         </button>
       </div>
 
-      {error && <p className="mt-3 text-sm font-medium text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p className="mt-3 text-sm font-medium text-[var(--danger)]">{error}</p>}
 
       {result && (
-        <div className="mt-4 rounded-xl border border-slate-200/70 bg-slate-50/70 p-4 dark:border-white/10 dark:bg-white/5">
+        <div className="mt-4 subpanel rounded-xl p-4">
           <p className="text-sm">
-            <span className="font-bold text-emerald-600 dark:text-emerald-400">{result.removed}</span> duplicate(s) removed —{' '}
+            <span className="font-bold text-[var(--success)]">{result.removed}</span> duplicate(s) removed —{' '}
             <span className="font-bold">{result.unique}</span> of {result.original} rows kept{' '}
-            <span className="text-slate-400">(matched by {result.keyBy})</span>.
+            <span className="text-dim">(matched by {result.keyBy})</span>.
           </p>
           <div className="mt-3 flex gap-2">
             <a href={result.downloadUrl} className="btn-secondary">Download Excel</a>

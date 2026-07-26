@@ -1,368 +1,346 @@
 {
   "meta": {
-    "event": null,
+    "event": "Global Fintech Fest",
     "year": "2025",
     "urls": [
-      "https://hr.economictimes.indiatimes.com/future-forward-hyderabad/interviews?dispType=13&tags=&cmpnyMdlNm=Previous%20Edition%20Our%20Speakers&comment_id=18289"
+      "https://cio200.globalcioforum.com/agenda-india-delhi/"
     ],
     "engines": [
       "playwright"
     ],
-    "confidence": 0.85,
-    "scrapedAt": "2026-07-01T12:59:56.078Z",
-    "linkedinEnriched": true,
-    "count": 25
+    "confidence": 0.55,
+    "scrapedAt": "2026-07-24T22:20:57.182Z",
+    "count": 47
   },
   "speakers": [
     {
-      "name": "Dr Sujiv Nair",
-      "designation": "Chief People Officer",
-      "company": "MSN Laboratories",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17599058858656_16840.jpg",
-      "linkedinUrl": "https://www.linkedin.com/in/drsujivnair",
-      "linkedinConfidence": 0.77,
-      "linkedinLevel": "Medium",
-      "linkedinStatus": "Found",
-      "linkedinMatchedName": "Dr. Sujiv Nair, PhD",
-      "linkedinMatchedCompany": "MSN Laboratories",
-      "linkedinMatchedTitle": "Dr. Sujiv Nair, PhD - Visiting Faculty IIT Hyderabad - LinkedIn"
+      "name": "Sundip Sibal",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/sundip-sibal/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/04/Sundip.jpg"
     },
     {
-      "name": "Sharmila Khan",
-      "designation": "Director - Country People Lead",
-      "company": "Micron Technology",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17640491286182_20749.webp",
-      "linkedinUrl": "https://www.linkedin.com/in/sharmila-khan-584662392",
-      "linkedinConfidence": 0.9,
-      "linkedinLevel": "High",
-      "linkedinStatus": "Found",
-      "linkedinMatchedName": "Sharmila Khan",
-      "linkedinMatchedCompany": "Micron Technology",
-      "linkedinMatchedTitle": "Sharmila Khan - Country People Leader at Micron Technology"
+      "name": "Richa Samantaray",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/richa-samantaray/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/04/Richa-S.jpg"
     },
     {
-      "name": "Gaurav Kumar",
-      "designation": "co-founder & CTO",
-      "company": "TurboHire",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17651942636047_73961.webp",
-      "linkedinUrl": "https://www.linkedin.com/in/gksinha",
-      "linkedinConfidence": 0.8,
-      "linkedinLevel": "Medium",
-      "linkedinStatus": "Found",
-      "linkedinMatchedName": "Gaurav Kumar",
-      "linkedinMatchedCompany": "TurboHire",
-      "linkedinMatchedTitle": "Gaurav Kumar - TurboHire | LinkedIn"
+      "name": "Pratap Pat Joshi",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/pratap-pat-joshi/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/05/Pratap-Pat-Joshi.png"
     },
     {
-      "name": "Arvind Jonalgadda",
-      "designation": "Head - HR",
-      "company": "Shriram Life Insurance",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17599061797709_85779.jpg",
-      "linkedinUrl": "https://www.linkedin.com/in/arvind-jonalgadda-7375725",
-      "linkedinConfidence": 0.81,
-      "linkedinLevel": "Medium",
-      "linkedinStatus": "Found",
-      "linkedinMatchedName": "Arvind Jonalgadda",
-      "linkedinMatchedCompany": "Shriram Life Insurance",
-      "linkedinMatchedTitle": "Arvind Jonalgadda - People|| Strategy|| Growth - LinkedIn"
+      "name": "Dr. Dharmendra Kumar Yadav",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/dr-dharmendra-kumar-yadav/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/05/Dharmendra-1.png"
     },
     {
-      "name": "Kavita Kurup",
-      "designation": "SVP & Chief People Officer",
-      "company": "Cyient",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17624082283068_61413.webp",
-      "linkedinUrl": "https://www.linkedin.com/in/kavitakurup",
-      "linkedinConfidence": 0.95,
-      "linkedinLevel": "High",
-      "linkedinStatus": "Found",
-      "linkedinMatchedName": "Kavita Kurup",
-      "linkedinMatchedCompany": "Cyient",
-      "linkedinMatchedTitle": "Kavita Kurup - Chief People Officer | Transformation & Talent ..."
+      "name": "Dr Ektaa Sibal",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/dr-ektaa-sibal/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/04/Dr-Ektaa-Sibal-900x900-1.jpg"
     },
     {
-      "name": "Swapna Saripalli",
-      "designation": "Senior Director - HR",
-      "company": "Eli Lilly Services India",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17624176865941_32254.webp",
-      "linkedinUrl": "",
-      "linkedinConfidence": 0,
-      "linkedinLevel": "",
-      "linkedinStatus": "Not Found",
-      "linkedinMatchedName": "",
-      "linkedinMatchedCompany": "",
-      "linkedinMatchedTitle": ""
+      "name": "Alok Agrawal",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/alok-agrawal/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2026/07/Alok-Agrawal.webp"
     },
     {
-      "name": "Smriti Mathur",
-      "designation": "VP - People India & Global Talent Advisory Partner",
-      "company": "Pegasystems",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17599067259701_44758.jpg",
-      "linkedinUrl": "https://www.linkedin.com/in/smritimathur",
-      "linkedinConfidence": 0.8,
-      "linkedinLevel": "Medium",
-      "linkedinStatus": "Found",
-      "linkedinMatchedName": "Smriti Mathur (she/her)",
-      "linkedinMatchedCompany": "Pegasystems",
-      "linkedinMatchedTitle": "Smriti Mathur (she/her) - Head Human Resources I Global ..."
+      "name": "Jasper Paul",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/japer-paul-joseph/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/04/Japer-Paul-Joseph-900x900-1.jpg"
     },
     {
-      "name": "Madhulika Vedhula",
-      "designation": "Head of HR",
-      "company": "Providence India",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17621517626714_73598.webp",
-      "linkedinUrl": "https://www.linkedin.com/in/madhulika-vedula-73536810",
-      "linkedinConfidence": 0.76,
-      "linkedinLevel": "Medium",
-      "linkedinStatus": "Found",
-      "linkedinMatchedName": "Madhulika Vedula",
-      "linkedinMatchedCompany": "Providence India",
-      "linkedinMatchedTitle": "Madhulika Vedula - Providence India - LinkedIn"
+      "name": "Upkar Singh",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/upkar-singh/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/05/UPKAR-SINGH.png"
     },
     {
-      "name": "Rajita Singh",
-      "designation": "CHRO",
-      "company": "Kyndrl India",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17642387714982_81614.webp",
-      "linkedinUrl": "",
-      "linkedinConfidence": 0,
-      "linkedinLevel": "",
-      "linkedinStatus": "Not Found",
-      "linkedinMatchedName": "",
-      "linkedinMatchedCompany": "",
-      "linkedinMatchedTitle": ""
+      "name": "Dr. Nikhil Kumar Nigam",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/dr-nikhil-kumar-nigam/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/04/Dr.-Nikhil-Kumar-Nigam-Photo.png"
     },
     {
-      "name": "Ridhhi Sanghi",
-      "designation": "COO",
-      "company": "TurboHire",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_1765194185055_77733.webp",
-      "linkedinUrl": "https://www.linkedin.com/in/ridhhi-sanghi-0a0aa617",
-      "linkedinConfidence": 1,
-      "linkedinLevel": "High",
-      "linkedinStatus": "Found",
-      "linkedinMatchedName": "Ridhhi Sanghi",
-      "linkedinMatchedCompany": "TurboHire",
-      "linkedinMatchedTitle": "Ridhhi Sanghi - Building TurboHire; COO | Cipla - LinkedIn"
+      "name": "Vinay Kumar",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/vinay-kumar/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2026/06/Vinay-Kumar.webp"
     },
     {
-      "name": "Shruti Walia",
-      "designation": "Head of HR",
-      "company": "Curefit",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17642309053541_57746.webp",
-      "linkedinUrl": "https://www.linkedin.com/in/shrutiwalia1",
-      "linkedinConfidence": 0.9,
-      "linkedinLevel": "High",
-      "linkedinStatus": "Found",
-      "linkedinMatchedName": "Shruti Walia",
-      "linkedinMatchedCompany": "Curefit",
-      "linkedinMatchedTitle": "Shruti Walia - Start-up HR | CureFit | Zivame | Flipkart - LinkedIn"
+      "name": "Dr. Sunil Kr Pandey",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/dr-sunil-kr-pandey/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/04/Sunil-Pandey.png"
     },
     {
-      "name": "Sudipto Mandal",
-      "designation": "CHRO & Head - HR",
-      "company": "L&T Metro Rail Hyderabad",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17599070469565_45988.jpg",
-      "linkedinUrl": "https://www.linkedin.com/in/sudipto-mandal-6078232",
-      "linkedinConfidence": 0.8,
-      "linkedinLevel": "Medium",
-      "linkedinStatus": "Found",
-      "linkedinMatchedName": "Sudipto Mandal",
-      "linkedinMatchedCompany": "L&T Metro Rail Hyderabad",
-      "linkedinMatchedTitle": "Sudipto Mandal - CRISIL- Zeiss- Asian Paints - LinkedIn"
+      "name": "Mohit Tandon",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/mohit-tandon/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/05/Mohit-Tandon.jpg"
     },
     {
-      "name": "Priyanka Roy",
-      "designation": "Head of HR - GCC",
-      "company": "CGI",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17600797239758_49879.jpg",
-      "linkedinUrl": "https://www.linkedin.com/in/priyanka-roy-125ab311",
-      "linkedinConfidence": 1,
-      "linkedinLevel": "High",
-      "linkedinStatus": "Found",
-      "linkedinMatchedName": "Priyanka Roy",
-      "linkedinMatchedCompany": "CGI",
-      "linkedinMatchedTitle": "Priyanka Roy - HR Head for the Global Capability Center (GCC)"
+      "name": "Rajeev Dutt",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/rajeev-dutt/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2026/07/Rajeev-Dutt.webp"
     },
     {
-      "name": "Ashish Saxena",
-      "designation": "Senior Director & Head of HR",
-      "company": "CDK India",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17599117323462_75073.jpg",
-      "linkedinUrl": "",
-      "linkedinConfidence": 0,
-      "linkedinLevel": "",
-      "linkedinStatus": "Not Found",
-      "linkedinMatchedName": "",
-      "linkedinMatchedCompany": "",
-      "linkedinMatchedTitle": ""
+      "name": "Ravindra Kumar Srivastava",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/ravindra-kumar-srivastava/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/05/Ravindra-Kumar-Srivastava.png"
     },
     {
-      "name": "Anthony Kiran",
-      "designation": "Group Head - HR",
-      "company": "Astra Microwave Products",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17599062917432_74646.jpg",
-      "linkedinUrl": "https://www.linkedin.com/in/anthonykiran",
-      "linkedinConfidence": 0.8,
-      "linkedinLevel": "Medium",
-      "linkedinStatus": "Found",
-      "linkedinMatchedName": "Anthony Kiran",
-      "linkedinMatchedCompany": "Astra Microwave Products Limited",
-      "linkedinMatchedTitle": "***** **** ***** *********,******,*******,****** ******* * ****** *** ******* * ****** ** **********,***** **** * ****** ************ ********* * ********* * **** * ****,******* * ***** ********** *******,******** **** * ****** ***********,****** ******* * ** * **************,******* * **** * ****** **********,******* * ************* ** *** * ** ***********"
+      "name": "Achin K Sharma",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/achin-k-sharma/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/04/Achin-K-Sharma.png"
     },
     {
-      "name": "Kiran Ponnada",
-      "designation": "Senior Director",
-      "company": "Global - HR, Metrixlab",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17624149600832_85436.webp",
-      "linkedinUrl": "https://www.linkedin.com/in/kiranponnada",
-      "linkedinConfidence": 0.72,
-      "linkedinLevel": "Low",
-      "linkedinStatus": "Verification Failed",
-      "linkedinMatchedName": "Kiran Ponnada",
-      "linkedinMatchedCompany": "Global - HR, Metrixlab",
-      "linkedinMatchedTitle": "Kiran Ponnada - Global HR Leader - LinkedIn"
+      "name": "Madan Kaushik",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/madan-kaushik/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/04/Madan-Kaushik.png"
     },
     {
-      "name": "Sarita Narisetty",
-      "designation": "Director - HR",
-      "company": "Solugenix",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17634661800924_54952.webp",
-      "linkedinUrl": "",
-      "linkedinConfidence": 0,
-      "linkedinLevel": "",
-      "linkedinStatus": "Not Found",
-      "linkedinMatchedName": "",
-      "linkedinMatchedCompany": "",
-      "linkedinMatchedTitle": ""
+      "name": "Shashank Jain",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/shashank-jain/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/04/Shashank-Jain.png"
     },
     {
-      "name": "Amit Vijay Shetty",
-      "designation": "CHRO",
-      "company": "Heritage Foods",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17650028839756_74390.webp",
-      "linkedinUrl": "https://www.linkedin.com/in/amit-shetty-86703815",
-      "linkedinConfidence": 0.66,
-      "linkedinLevel": "Low",
-      "linkedinStatus": "Verification Failed",
-      "linkedinMatchedName": "Amit Shetty",
-      "linkedinMatchedCompany": "Heritage Foods",
-      "linkedinMatchedTitle": "Amit Shetty | Consumer & FMCG | India HR Leadership"
+      "name": "Manoj Yadav",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/manoj-yadav/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/05/Manoj-Kumar-Yadav.png"
     },
     {
-      "name": "Anand Kabra",
-      "designation": "Chief People and Transformation Officer",
-      "company": "Apexon",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17599065737773_25325.jpg",
-      "linkedinUrl": "https://www.linkedin.com/in/anandkabratalentstrategytransformation",
-      "linkedinConfidence": 0.84,
-      "linkedinLevel": "Medium",
-      "linkedinStatus": "Found",
-      "linkedinMatchedName": "Anand Kabra",
-      "linkedinMatchedCompany": "Apexon",
-      "linkedinMatchedTitle": "Anand Kabra - Apexon | LinkedIn"
+      "name": "Sunando Bhattacharya",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/sunando-bhattacharya/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/04/Sudando.jpg"
     },
     {
-      "name": "Kannu Priya Taneja",
-      "designation": "Chief People Officer",
-      "company": "Credera",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17651934101844_84016.webp",
-      "linkedinUrl": "",
-      "linkedinConfidence": 0,
-      "linkedinLevel": "",
-      "linkedinStatus": "Not Found",
-      "linkedinMatchedName": "",
-      "linkedinMatchedCompany": "",
-      "linkedinMatchedTitle": ""
+      "name": "Umesh Unnikrishnan",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/mr-umesh-unnikrishnan/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/05/umesh.png"
     },
     {
-      "name": "K R Swamy",
-      "designation": "Head - HR Shared Services",
-      "company": "SS&C Technologies",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17624125084093_25264.webp",
-      "linkedinUrl": "https://www.linkedin.com/in/swamy-kopparthi-3467301a",
-      "linkedinConfidence": 0.91,
-      "linkedinLevel": "High",
-      "linkedinStatus": "Found",
-      "linkedinMatchedName": "Swamy Kopparthi",
-      "linkedinMatchedCompany": "SS&C Technologies",
-      "linkedinMatchedTitle": "Swamy Kopparthi - Global Shared Services - Human Resources"
+      "name": "Mr. Raman Dutta",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/mr-raman-dutta/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/05/Raman-Dutta.png"
     },
     {
-      "name": "Dileep Narayan",
-      "designation": "Director - HR",
-      "company": "EPAM Systems India",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17599073067378_84351.jpg",
-      "linkedinUrl": "https://www.linkedin.com/in/dileep-narayan-8162a752",
-      "linkedinConfidence": 0.9,
-      "linkedinLevel": "High",
-      "linkedinStatus": "Found",
-      "linkedinMatchedName": "Dileep Narayan",
-      "linkedinMatchedCompany": "EPAM Systems India",
-      "linkedinMatchedTitle": "Dileep Narayan - Director - Talent Development, OD, DEI ..."
+      "name": "Dr. Manuj Mittal",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/dr-manuj-mittal/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/05/Dr.-Manuj-Mittal.png"
     },
     {
-      "name": "Gauri Butti",
-      "designation": "Executive Director - Leadership Development",
-      "company": "Wells Fargo",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17631046463214_16067.webp",
-      "linkedinUrl": "",
-      "linkedinConfidence": 0,
-      "linkedinLevel": "",
-      "linkedinStatus": "Not Found",
-      "linkedinMatchedName": "",
-      "linkedinMatchedCompany": "",
-      "linkedinMatchedTitle": ""
+      "name": "Mr. Raj Kumar Sharma",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/mr-raj-kumar-sharma/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/05/Raj-Kumar-Sharma.png"
     },
     {
-      "name": "Uma Rao Ganduri",
-      "designation": "Ex-CHRO",
-      "company": "Sekhmet Pharmaventures",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17599063833361_77030.jpg",
-      "linkedinUrl": "https://www.linkedin.com/in/uma-rao-g-774aaa3",
-      "linkedinConfidence": 0.86,
-      "linkedinLevel": "Medium",
-      "linkedinStatus": "Found",
-      "linkedinMatchedName": "Uma Rao G",
-      "linkedinMatchedCompany": "Sekhmet Pharmaventures",
-      "linkedinMatchedTitle": "Uma Rao G - TISS, Fractional CHRO - LinkedIn"
+      "name": "Mr. Prashant Jain",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/mr-prashant-jain/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/05/Prashant-Jain.png"
     },
     {
-      "name": "Puja Bothra",
-      "designation": "Associate Editor",
-      "company": "ETHRWorld",
-      "profileUrl": "javascript:",
-      "imageUrl": "https://img.etb2bimg.com/files/cp/data_file_17652779331374_69165.webp",
-      "linkedinUrl": "https://www.linkedin.com/in/puja-bothra-319a154",
-      "linkedinConfidence": 1,
-      "linkedinLevel": "High",
-      "linkedinStatus": "Found",
-      "linkedinMatchedName": "Puja Bothra",
-      "linkedinMatchedCompany": "ETHRWorld",
-      "linkedinMatchedTitle": "Puja Bothra - Associate Editor - LinkedIn"
+      "name": "Mr. Maghara Bushanan D",
+      "designation": "",
+      "company": "",
+      "profileUrl": "https://cio200.globalcioforum.com/author/mr-maghara-bushanan-d/",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/04/Maghara-Bushanan-D.jpg"
+    },
+    {
+      "name": "Talal Al Aasmi",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/05/Talal-Al-Aasmi-web.png"
+    },
+    {
+      "name": "Mohammed Sibgathullah Khan",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2026/03/Mohammed-Sibgathullah-Khan.webp"
+    },
+    {
+      "name": "Venkatesh Mahadevan",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/12/Venkatesh-Mahadevan.webp"
+    },
+    {
+      "name": "Wolfram Schulze",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/05/Wolfram-Schulze.jpg"
+    },
+    {
+      "name": "Meslum AlKindi",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/05/Meslum-AlKindi-web.png"
+    },
+    {
+      "name": "James Thang",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/04/James-Thang.png"
+    },
+    {
+      "name": "Chenthil Kumar",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/12/Chenthil-Kumar.webp"
+    },
+    {
+      "name": "Mohamed hamed",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/12/Dr.-Mohamed-Hamed.webp"
+    },
+    {
+      "name": "Hussain Abdulmohsen Aljamri",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2026/03/Hussain-Abdulmohsen-Aljamri.webp"
+    },
+    {
+      "name": "Aaron Lee",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/04/Aaron-Lee.png"
+    },
+    {
+      "name": "Shahid Muhammad Rafiq",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2026/03/Shahid-Muhammad-Rafiq.webp"
+    },
+    {
+      "name": "Dr Shijin Prasad",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2026/03/Dr.-Shijin-Prasad-.webp"
+    },
+    {
+      "name": "Nilton Mutungi",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2025/05/Nilton-Mutungi.png"
+    },
+    {
+      "name": "Munish Jain",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2026/03/Munish-Jain.webp"
+    },
+    {
+      "name": "Ministry of Science & Technology",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2026/07/Emblem_of_Sri_Lanka.svg"
+    },
+    {
+      "name": "Embassy of SriLanka",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2026/07/Emblem_of_Sri_Lanka.svg"
+    },
+    {
+      "name": "Consulate General. of SriLanka",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2026/07/Emblem_of_Sri_Lanka.svg"
+    },
+    {
+      "name": "Ministry of Defense",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2026/07/Emblem_of_Sri_Lanka.svg"
+    },
+    {
+      "name": "Ministry of Education",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2026/07/Emblem_of_Sri_Lanka.svg"
+    },
+    {
+      "name": "Ministry of Foreign Affairs",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2026/07/Emblem_of_Sri_Lanka.svg"
+    },
+    {
+      "name": "Foreign Employment & Tourism",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2026/07/Emblem_of_Sri_Lanka.svg"
+    },
+    {
+      "name": "Presidential Secretariat SriLanka",
+      "designation": "",
+      "company": "",
+      "profileUrl": "",
+      "imageUrl": "https://cio200.globalcioforum.com/wp-content/uploads/2026/07/Emblem_of_Sri_Lanka.svg"
     }
   ]
 }

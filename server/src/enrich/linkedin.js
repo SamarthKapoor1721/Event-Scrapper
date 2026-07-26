@@ -1,3 +1,5 @@
+import path from 'node:path';
+import os from 'node:os';
 import stringSimilarity from 'string-similarity';
 import { clean, normalizeName, normalizeCompany } from '../normalize/normalize.js';
 import { getCached, putCached, flushCache } from './cache.js';
@@ -187,6 +189,12 @@ async function gotoSafe(page, url, options) {
   }
   try {
     return await page.goto(url, options);
+  } catch (err) {
+    // A timed-out/failed goto leaves the tab still loading that URL, which then
+    // "interrupts" the next navigation. Park it on about:blank (inside the lock)
+    // so the next search starts from a clean state.
+    await page.goto('about:blank', { timeout: 5000 }).catch(() => {});
+    throw err;
   } finally {
     release();
   }
@@ -250,6 +258,12 @@ async function parseResults(html, decode) {
     if (!url || seen.has(url)) return;
     seen.add(url);
     const $card = $a.closest('.snippet, [data-type], li.b_algo, article, .result, .w-gl__result, div.g, div.tF2Cxc, div.MjjYud');
+    // Keep only real organic results (drops "people also viewed"/sidebar links).
+    // An organic hit either sits in a known result container OR wraps a heading —
+    // checking both means a class-name change upstream can't silently drop
+    // everything.
+    const isOrganic = $card.length > 0 || $a.find('h3, h2').length > 0;
+    if (!isOrganic) return;
     const title = clean($card.find('h3, h2, [class*="title"]').first().text()) || clean($a.text());
     const snippet = clean($card.find('[class*="description"], .b_caption p, .VwiC3b, .snippet-description, p').first().text());
     out.push({ url, title, snippet, name: nameFromTitle(title) });
@@ -328,6 +342,28 @@ async function searchBraveApi(query, logger, { count = 10, offset = 0 } = {}) {
     }
   }
   return [];
+}
+
+/** Google Programmable Search (Custom Search JSON API) — official, no CAPTCHA.
+ *  Free tier: 100 queries/day, no credit card. Needs GOOGLE_CSE_KEY + GOOGLE_CSE_CX. */
+async function searchGoogleCse(query, logger, { start = 1 } = {}) {
+  const key = process.env.GOOGLE_CSE_KEY;
+  const cx = process.env.GOOGLE_CSE_CX;
+  if (!key || !cx) return [];
+  const { default: axios } = await import('axios');
+  try {
+    const res = await axios.get('https://www.googleapis.com/customsearch/v1', {
+      params: { key, cx, q: query, num: 10, start },
+      timeout: 15000,
+    });
+    return (res.data?.items || [])
+      .map((it) => ({ url: cleanProfileUrl(it.link), title: clean(it.title), snippet: clean(it.snippet), name: nameFromTitle(it.title) }))
+      .filter((c) => c.url);
+  } catch (err) {
+    if (err.response?.status === 429) logger?.warn('Google Custom Search daily quota (100/day) reached.');
+    else logger?.warn(`Google Custom Search error: ${err.response?.data?.error?.message || err.message}`);
+    return [];
+  }
 }
 
 /** Run one query through the active provider (with keyless fallback). */
@@ -510,6 +546,57 @@ async function enrichOne(person, ctx, logger) {
 // ---------------------------------------------------------------------------
 // Browser session / concurrency
 // ---------------------------------------------------------------------------
+
+const HEADFUL = /^(1|true|yes|on)$/i.test(process.env.HEADFUL || '');
+
+/**
+ * Open a browser context for searching. With HEADFUL=1 it opens a VISIBLE window
+ * backed by a persistent profile — so you can solve a CAPTCHA by hand once and it
+ * stays solved across searches and restarts. Otherwise a normal headless context.
+ */
+async function openSearchContext(logger) {
+  let chromium;
+  try {
+    ({ chromium } = await import('playwright'));
+  } catch {
+    logger?.warn('Playwright not installed — cannot search.');
+    return null;
+  }
+  const args = ['--no-sandbox', '--disable-blink-features=AutomationControlled'];
+  const consent = [{ name: 'CONSENT', value: 'YES+cb', domain: '.google.com', path: '/' }];
+  try {
+    if (HEADFUL) {
+      const dir = path.join(os.tmpdir(), 'event-scraper-profile');
+      const context = await chromium.launchPersistentContext(dir, { headless: false, args, viewport: { width: 1280, height: 900 }, userAgent: UA });
+      await context.addCookies(consent).catch(() => {});
+      logger?.info('Visible browser (HEADFUL) — solve any CAPTCHA in the window; it will be remembered.');
+      return { context, headful: true, close: async () => { await context.close().catch(() => {}); } };
+    }
+    const browser = await chromium.launch({ headless: true, args });
+    const context = await browser.newContext({ userAgent: UA, viewport: { width: 1280, height: 900 } });
+    await context.addCookies(consent).catch(() => {});
+    return { context, headful: false, close: async () => { await browser.close().catch(() => {}); } };
+  } catch (err) {
+    logger?.warn(`Browser launch failed: ${err.message}`);
+    return null;
+  }
+}
+
+/** In headful mode, wait for the user to solve a shown CAPTCHA (up to ~2 min). */
+async function waitForManualSolve(page, logger) {
+  logger?.warn('⚠ CAPTCHA shown — please solve it in the browser window (waiting up to 2 min)…');
+  const deadline = Date.now() + 120000;
+  while (Date.now() < deadline) {
+    await page.waitForTimeout(2500);
+    const html = await page.content().catch(() => '');
+    if (!looksLikeChallenge(html) && !/\/sorry\/index/i.test(page.url())) {
+      logger?.success('CAPTCHA cleared — continuing.');
+      return true;
+    }
+  }
+  logger?.warn('CAPTCHA not solved in time — continuing.');
+  return false;
+}
 
 async function launchBrowser(logger) {
   let chromium;
@@ -763,7 +850,7 @@ const ROLE_ALIASES = (() => {
 // "Talent Acquisition Head" also matches "Head of Talent Acquisition" /
 // "Talent Acquisition Leader", and "CTO" matches "Chief Technology Officer".
 const SENIORITY = 'Head|Lead|Director|Manager|Officer|Leader|VP|President';
-function roleVariants(role) {
+export function roleVariants(role) {
   const t = clean(role);
   if (!t) return [];
   const out = new Set([`"${t}"`]);
@@ -823,9 +910,12 @@ function industryVariants(ind) {
   return syns.map((s) => `"${s}"`);
 }
 
-export function buildXrayQuery({ location, locations = [], designations = [], industries = [], keywords = [] } = {}) {
-  const roles = [];
-  for (const d of designations) roles.push(...roleVariants(d));
+export function buildXrayQuery({ location, locations = [], designations = [], exactRole, industries = [], keywords = [] } = {}) {
+  // `exactRole` (already quoted) uses that single phrase verbatim instead of
+  // expanding the designations — used by deep search to give each phrasing its
+  // own query (each query gets its own ~10-result cap from the engine).
+  const roles = exactRole ? [exactRole] : [];
+  if (!exactRole) for (const d of designations) roles.push(...roleVariants(d));
   const parts = ['site:linkedin.com/in'];
   if (roles.length) parts.push(`(${[...new Set(roles)].join(' OR ')})`);
 
@@ -887,6 +977,38 @@ export function classifyLead(person) {
   };
 }
 
+// Seniority words that are too generic to verify a role on their own.
+const GENERIC_ROLE_TOKENS = new Set(['head', 'vp', 'director', 'manager', 'lead', 'leader', 'officer', 'president', 'chief', 'senior', 'global', 'avp', 'svp', 'evp']);
+
+function normText(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Does this profile text actually match one of the searched roles?
+ * Checks every role phrasing as a token-set (order-independent), ignoring
+ * filler words. Variants made only of generic seniority words (e.g. just
+ * "Head") are skipped — they'd match anyone. Returns true when nothing
+ * verifiable was requested, so we never drop everything.
+ */
+export function roleMatches(text, roles = []) {
+  if (!roles.length) return true;
+  const hay = new Set(normText(text).split(' ').filter(Boolean));
+  if (!hay.size) return false;
+  let checked = 0;
+  for (const role of roles) {
+    for (const variant of roleVariants(role)) {
+      const tokens = normText(variant.replace(/"/g, ''))
+        .split(' ')
+        .filter((t) => t.length > 1 && !['of', 'and', 'the', 'for'].includes(t));
+      if (!tokens.length || tokens.every((t) => GENERIC_ROLE_TOKENS.has(t))) continue; // too generic to verify
+      checked += 1;
+      if (tokens.every((t) => hay.has(t))) return true;
+    }
+  }
+  return checked === 0; // nothing specific enough to check → don't filter it out
+}
+
 /** If the input is a Google/Bing search URL, pull out the actual query (q=…). */
 export function extractQuery(input) {
   const s = clean(input);
@@ -913,7 +1035,9 @@ export async function searchProfiles(rawQueries, opts = {}) {
   if (!items.length) return [];
   const queries = items.map((i) => i.query);
   const seen = new Map();
-  logger?.info(`Profile search: ${queries.length} query(ies) via ${process.env.BRAVE_API_KEY ? 'Brave Search API' : 'keyless browser search'}.`);
+  const cse = process.env.GOOGLE_CSE_KEY && process.env.GOOGLE_CSE_CX;
+  const provider = process.env.BRAVE_API_KEY ? 'Brave Search API' : cse ? 'Google Custom Search' : 'keyless browser search';
+  logger?.info(`Profile search: ${queries.length} query(ies) via ${provider}.`);
 
   if (process.env.BRAVE_API_KEY) {
     for (const { query, tag } of items) {
@@ -923,21 +1047,27 @@ export async function searchProfiles(rawQueries, opts = {}) {
         for (const c of found) if (c.url && !seen.has(c.url)) seen.set(c.url, { ...c, source: 'Brave API', tag });
       }
     }
+  } else if (cse) {
+    for (const { query, tag } of items) {
+      for (let off = 0; off < pages; off++) {
+        const found = await searchGoogleCse(query, logger, { start: off * 10 + 1 });
+        if (!found.length) break;
+        for (const c of found) if (c.url && !seen.has(c.url)) seen.set(c.url, { ...c, source: 'Google CSE', tag });
+      }
+    }
   } else {
-    const browser = await launchBrowser(logger);
-    if (!browser) throw new Error('Search browser unavailable (Playwright not installed).');
-    const context = await browser.newContext({ userAgent: UA, viewport: { width: 1280, height: 900 } });
-    // Pre-accept Google's consent interstitial so result pages render directly.
-    await context.addCookies([
-      { name: 'CONSENT', value: 'YES+cb', domain: '.google.com', path: '/' },
-    ]).catch(() => {});
+    const session = await openSearchContext(logger);
+    if (!session) throw new Error('Search browser unavailable (Playwright not installed).');
+    const { context, headful, close } = session;
     const page = await context.newPage();
     try {
       // For a single query, hit every engine and merge (maximize one search).
       // For many queries (per city×role), use the first engine that answers each
       // — the breadth comes from the queries, so we keep per-query load light.
       const allEngines = queries.length === 1;
+      let blockedStreak = 0;
       for (const { query, tag } of items) {
+        const sizeBefore = seen.size;
         for (const engine of PAGED_ENGINES) {
           let gotAny = false;
           for (let p = 0; p < pages; p++) {
@@ -946,13 +1076,18 @@ export async function searchProfiles(rawQueries, opts = {}) {
             try {
               await gotoSafe(page, engine.url(query, p), { waitUntil: 'domcontentloaded', timeout: 25000 });
               await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-              const html = await page.content();
-              // Detect an engine block/CAPTCHA (e.g. Google's tiny "sorry" page)
-              // so the caller can tell the user why results are thin.
-              if (looksLikeChallenge(html) || (engine.name === 'Google' && html.length < 15000 && !/linkedin\.com\/in\//i.test(html))) {
-                if (stats) stats.blocked = true;
-                logger?.warn(`${engine.name} is rate-limiting/CAPTCHA — skipping.`);
-                break;
+              let html = await page.content();
+              // Detect an engine block/CAPTCHA (e.g. Google's tiny "sorry" page).
+              const blocked = looksLikeChallenge(html) || (engine.name === 'Google' && html.length < 15000 && !/linkedin\.com\/in\//i.test(html));
+              if (blocked) {
+                // In visible mode, pause for the user to solve it once, then reload.
+                if (headful && await waitForManualSolve(page, logger)) {
+                  html = await page.content();
+                } else {
+                  if (stats) stats.blocked = true;
+                  logger?.warn(`${engine.name} is rate-limiting/CAPTCHA — skipping.`);
+                  break;
+                }
               }
               const found = await parseResults(html, engine.decode);
               const before = seen.size;
@@ -971,10 +1106,18 @@ export async function searchProfiles(rawQueries, opts = {}) {
           }
           if (gotAny && !allEngines) break; // one engine is enough in multi-query mode
         }
+        // Circuit breaker: if every engine is blocked for several queries in a
+        // row, stop rather than grinding through the rest for nothing.
+        blockedStreak = seen.size === sizeBefore ? blockedStreak + 1 : 0;
+        if (blockedStreak >= 5) {
+          if (stats) stats.blocked = true;
+          logger?.warn('All search engines are blocking — stopping early and returning what was found.');
+          break;
+        }
         if (queries.length > 1) logger?.info(`  ${seen.size} profile(s) collected so far…`);
       }
     } finally {
-      await browser.close().catch(() => {});
+      await close();
     }
   }
 

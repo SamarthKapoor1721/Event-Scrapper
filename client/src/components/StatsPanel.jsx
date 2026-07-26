@@ -1,8 +1,8 @@
 function Stat({ label, value, accent }) {
   return (
-    <div className="card card-hover animate-fade-up p-4">
-      <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">{label}</div>
-      <div className={`mt-2 text-3xl font-extrabold tracking-tight ${accent || ''}`}>{value}</div>
+    <div className="card stat-card animate-fade-up p-4">
+      <div className="text-xs font-semibold uppercase tracking-wide text-dim">{label}</div>
+      <div className={`stat-value mt-2 text-3xl font-extrabold tracking-tight ${accent || ''}`}>{value}</div>
     </div>
   );
 }
@@ -16,12 +16,12 @@ export default function StatsPanel({ result }) {
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <Stat label="Speakers" value={speakers} accent="text-indigo-600 dark:text-indigo-400" />
-      <Stat label="Partners" value={companies} accent="text-violet-600 dark:text-violet-400" />
-      <Stat label="Confidence" value={confidence} accent="text-emerald-600 dark:text-emerald-400" />
+      <Stat label="Speakers" value={speakers} accent="link-accent" />
+      <Stat label="Partners" value={companies} accent="text-[var(--info)]" />
+      <Stat label="Confidence" value={confidence} accent="text-[var(--success)]" />
       <Stat
         label="Last scrape"
-        value={<span className="text-sm font-bold text-slate-600 dark:text-slate-300">{ts}</span>}
+        value={<span className="text-sm font-bold text-dim">{ts}</span>}
       />
     </div>
   );

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { api } from '../api';
+import Picker from './Picker';
+import { ROLE_PRESETS, CITY_PRESETS } from '../constants';
 
 /**
  * Company POC finder: for each company, search LinkedIn for the people who work
@@ -7,8 +9,8 @@ import { api } from '../api';
  */
 export default function PostMinerPanel() {
   const [companies, setCompanies] = useState('');
-  const [roles, setRoles] = useState('');
-  const [location, setLocation] = useState('');
+  const [roles, setRoles] = useState([]);
+  const [cities, setCities] = useState([]);
   const [pages, setPages] = useState(2);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -23,8 +25,8 @@ export default function PostMinerPanel() {
     try {
       const data = await api.minePosts({
         companies: companyList,
-        designations: roles.split(',').map((r) => r.trim()).filter(Boolean),
-        location: location.trim(),
+        designations: roles,
+        locations: cities,
         pages: Number(pages) || 2,
       });
       setResult(data);
@@ -38,8 +40,8 @@ export default function PostMinerPanel() {
   return (
     <div className="space-y-5">
       <div className="card animate-fade-up p-5 sm:p-6">
-        <h2 className="text-lg font-bold">Find POCs at Companies</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <h2 className="card-title text-[15px]">Find POCs at Companies</h2>
+        <p className="mt-1 text-sm text-dim">
           Paste companies and get the people who work there from LinkedIn — Name, Designation, Company, profile link.
           Optionally narrow by role and location.
         </p>
@@ -54,14 +56,8 @@ export default function PostMinerPanel() {
               placeholder={'Deloitte\nInterGlobe Aviation\nPolicybazaar\nGenpact'}
             />
           </label>
-          <label className="block">
-            <span className="field-label">Roles (optional, comma-separated)</span>
-            <input className="input" value={roles} onChange={(e) => setRoles(e.target.value)} placeholder="CTO, CIO, Head of HR, VP Marketing" />
-          </label>
-          <label className="block">
-            <span className="field-label">Location (optional)</span>
-            <input className="input" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Gurugram" />
-          </label>
+          <Picker label="Posts / designations (optional)" options={ROLE_PRESETS} values={roles} setValues={setRoles} placeholder="Search a post e.g. CTO, HR Head…" />
+          <Picker label="Location (optional)" options={CITY_PRESETS} values={cities} setValues={setCities} placeholder="Search a city…" />
           <label className="block">
             <span className="field-label">Result pages (1–2 best)</span>
             <input type="number" min="1" max="3" className="input" value={pages} onChange={(e) => setPages(e.target.value)} />
@@ -83,18 +79,18 @@ export default function PostMinerPanel() {
           {result?.csvUrl && <a href={result.csvUrl} className="btn-secondary">Download CSV</a>}
         </div>
 
-        {error && <p className="mt-3 text-sm font-medium text-red-600 dark:text-red-400">{error}</p>}
+        {error && <p className="mt-3 text-sm font-medium text-[var(--danger)]">{error}</p>}
         {result?.note && (
-          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">⚠ {result.note}</p>
+          <p className="mt-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--warning)] bg-[var(--surface2)]">⚠ {result.note}</p>
         )}
-        {result && <p className="mt-3 text-xs text-slate-400">Found {result.count} POC(s).</p>}
+        {result && <p className="mt-3 text-xs text-dim">Found {result.count} POC(s).</p>}
       </div>
 
       {result?.rows?.length > 0 && (
         <div className="card animate-fade-up overflow-hidden">
           <div className="nice-scroll max-h-[32rem] overflow-auto">
             <table className="w-full text-left text-sm">
-              <thead className="sticky top-0 bg-slate-50/95 text-xs font-semibold uppercase tracking-wide text-slate-500 backdrop-blur dark:bg-slate-800/95">
+              <thead className="sticky top-0 thead-bg text-xs font-semibold uppercase tracking-wide text-dim">
                 <tr>
                   <th className="px-4 py-2.5">Name</th>
                   <th className="px-4 py-2.5">Designation</th>
@@ -102,15 +98,15 @@ export default function PostMinerPanel() {
                   <th className="px-4 py-2.5">LinkedIn</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+              <tbody className="divide-y divide-token">
                 {result.rows.map((r, i) => (
-                  <tr key={i} className="transition hover:bg-indigo-50/40 dark:hover:bg-white/[0.04]">
+                  <tr key={i} className="transition row-hover">
                     <td className="px-4 py-2.5 font-semibold">{r.Name || '—'}</td>
-                    <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{r.Designation || '—'}</td>
-                    <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{r.Company || '—'}</td>
+                    <td className="px-4 py-2.5 text-dim">{r.Designation || '—'}</td>
+                    <td className="px-4 py-2.5 text-dim">{r.Company || '—'}</td>
                     <td className="px-4 py-2.5">
                       {r['LinkedIn URL'] ? (
-                        <a className="text-indigo-600 hover:underline dark:text-indigo-400" href={r['LinkedIn URL']} target="_blank" rel="noreferrer">
+                        <a className="link-accent" href={r['LinkedIn URL']} target="_blank" rel="noreferrer">
                           {r['LinkedIn URL'].replace(/^https?:\/\/(www\.)?linkedin\.com/, '')}
                         </a>
                       ) : (

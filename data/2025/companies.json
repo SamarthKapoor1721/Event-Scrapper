@@ -1,24 +1,23 @@
 {
   "meta": {
-    "event": null,
+    "event": "Global Fintech Fest",
     "year": "2025",
     "urls": [
-      "https://hr.economictimes.indiatimes.com/future-forward-hyderabad/interviews?dispType=13&tags=&cmpnyMdlNm=Previous%20Edition%20Our%20Speakers&comment_id=18289"
+      "https://cio200.globalcioforum.com/agenda-india-delhi/"
     ],
     "engines": [
       "playwright"
     ],
-    "confidence": 0.85,
-    "scrapedAt": "2026-07-01T12:59:56.078Z",
-    "linkedinEnriched": true,
+    "confidence": 0.55,
+    "scrapedAt": "2026-07-24T22:20:57.182Z",
     "count": 1
   },
   "companies": [
     {
-      "company": "hr",
-      "category": "",
-      "website": "https://hr.economictimes.indiatimes.com/",
-      "logoUrl": "https://st.etb2bimg.com/Themes/Release/theme4/images/logos/hr-logo-mobile-header.svg?mod=3369"
+      "company": "Chat Widget",
+      "category": "OUR 2026 SPONSORS & PARTNERS",
+      "website": "",
+      "logoUrl": "https://us4-files.zohopublic.com/public/SalesIQ/download/d_707878924_brands_siq785df292c5ca10db33f5c120b4b5570c1d1c73fd247cd1a2bcfd1f3fe1e7b358?x-cli-msg=%7B%22x-siq-soid%22%3A%22707878924%22%2C%22x-siq-module%22%3A%22brands%22%2C%22x-siq-type%22%3A%22fsticker_online%22%2C%22x-siq-parentid%22%3A%22siq785df292c5ca10db33f5c120b4b5570c1d1c73fd247cd1a2bcfd1f3fe1e7b358%22%2C%22x-siq-resourceid%22%3A%221773302130222_533060000003647003%22%2C%22x-siq-filename%22%3A%22Flower%20Icon.png%22%2C%22x-siq-mode%22%3A%22view%22%7D"
     }
   ]
 }

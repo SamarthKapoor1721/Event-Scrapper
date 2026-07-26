@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import * as XLSX from 'xlsx';
-import { enrichPeople, searchProfiles, buildXrayQuery, classifyLead, findEvents } from '../enrich/linkedin.js';
+import { enrichPeople, searchProfiles, buildXrayQuery, classifyLead, findEvents, roleVariants, roleMatches } from '../enrich/linkedin.js';
 import { toCsv } from '../export/csv.js';
 import { buildRowsWorkbook } from '../export/excel.js';
 import { saveOutput } from '../storage/storage.js';
@@ -137,12 +137,24 @@ router.post('/search-profiles', async (req, res) => {
     // then merge — this yields far more people than one big combined OR query.
     const industryList = Array.isArray(industries) ? industries.map((i) => clean(i)).filter(Boolean) : [];
     let combos = [];
-    for (const c of cities) for (const r of roles) combos.push(buildXrayQuery({ location: c, designations: r ? [r] : [], industries: industryList, keywords }));
+    if (req.body?.deep) {
+      // Deep search: give EVERY role phrasing its own query. Engines cap each
+      // query at ~10 results, so N phrasings ≈ N× the people (slower, more
+      // requests, higher CAPTCHA risk).
+      for (const c of cities) {
+        for (const r of roles) {
+          const variants = r ? roleVariants(r) : [''];
+          for (const v of variants) combos.push(buildXrayQuery({ location: c, exactRole: v || undefined, designations: v ? [] : [], industries: industryList, keywords }));
+        }
+      }
+    } else {
+      for (const c of cities) for (const r of roles) combos.push(buildXrayQuery({ location: c, designations: r ? [r] : [], industries: industryList, keywords }));
+    }
     combos = [...new Set(combos)];
-    // Search every city × role combination separately (max coverage). Only if
-    // there are a lot do we group roles into one OR clause per city to keep the
-    // request count from tripping the search-engine CAPTCHA.
-    queries = combos.length > 24 ? cities.map((c) => buildXrayQuery({ location: c, designations: roleList, industries: industryList, keywords })) : combos;
+    // Search every combination separately (max coverage). Only if there are a lot
+    // do we group roles into one OR clause per city to bound the request count.
+    const cap = req.body?.deep ? 60 : 24;
+    queries = combos.length > cap ? cities.map((c) => buildXrayQuery({ location: c, designations: roleList, industries: industryList, keywords })) : combos;
     label = `${queries.length} search(es)${cityList.length ? ` · cities: ${cityList.join(', ')}` : ''}`;
   }
   if (!queries.length) {
@@ -160,8 +172,16 @@ router.post('/search-profiles', async (req, res) => {
     // Classify each lead (seniority · department · heuristic decision score),
     // drop non-decision-makers (unless disabled), and sort by score.
     const excludeJunk = req.body?.excludeJunk !== false;
-    const headers = ['Name', 'Designation', 'Seniority', 'Department', 'Company', 'LinkedIn URL', 'Decision Score', 'Source'];
+    // Accuracy: keep only profiles whose text actually shows one of the roles
+    // searched (drops unrelated people the engine happened to return).
+    const strict = req.body?.strict !== false;
+    const roleFilter = Array.isArray(designations) ? designations.map((d) => clean(d)).filter(Boolean) : [];
+    const headers = ['Name', 'LinkedIn URL', 'Decision Score'];
     let rows = profiles
+      // Lenient strict match: keep anyone whose title we couldn't read (they came
+      // from a role-targeted search, so trust it); only drop a clearly-parsed
+      // designation that doesn't match any searched role.
+      .filter((p) => !strict || !roleFilter.length || !clean(p.designation) || roleMatches(`${p.designation} ${p.snippet}`, roleFilter))
       .map((p) => {
         const c = classifyLead(p);
         return {
@@ -205,21 +225,31 @@ router.post('/search-profiles', async (req, res) => {
  * narrowed by role/location) and returns real POC profiles: name, company, URL.
  */
 router.post('/mine-posts', async (req, res) => {
-  const { companies, designations, location, pages, jobId: clientJobId } = req.body || {};
+  const { companies, designations, location, locations, pages, jobId: clientJobId } = req.body || {};
   const companyList = (Array.isArray(companies) ? companies : String(companies || '').split(/[\n,]/))
     .map((c) => clean(c)).filter(Boolean);
   if (!companyList.length) return res.status(400).json({ error: 'Provide at least one company (one per line).' });
 
-  const loc = clean(location);
+  // Cities must be OR'd as separate quoted terms — quoting them as one phrase
+  // ("Bengaluru OR Bangalore") matches nothing.
+  const cityList = [...new Set([location, ...(Array.isArray(locations) ? locations : [])].map((c) => clean(c)).filter(Boolean))];
+  const locClause = cityList.length === 1 ? ` "${cityList[0]}"` : cityList.length > 1 ? ` (${cityList.map((c) => `"${c}"`).join(' OR ')})` : '';
   const roleList = (Array.isArray(designations) ? designations : []).map((d) => clean(d)).filter(Boolean);
 
-  // One tagged query per company (× role if roles given), each scoped to
-  // linkedin.com/in so we only get real people at that company.
+  // One tagged query per company (× role when that stays under the cap). Every
+  // company always gets at least one search — none are dropped.
+  const MAX_QUERIES = 30;
+  const splitRoles = roleList.length > 0 && companyList.length * roleList.length <= MAX_QUERIES;
   const queries = [];
   for (const c of companyList) {
-    const base = `site:linkedin.com/in "${c}"${loc ? ` "${loc}"` : ''}`;
-    if (roleList.length) for (const r of roleList) queries.push({ query: `${base} "${r}"`, tag: c });
-    else queries.push({ query: base, tag: c });
+    const base = `site:linkedin.com/in "${c}"${locClause}`;
+    if (splitRoles) {
+      for (const r of roleList) queries.push({ query: `${base} "${r}"`, tag: c });
+    } else if (roleList.length) {
+      queries.push({ query: `${base} (${roleList.map((r) => `"${r}"`).join(' OR ')})`, tag: c });
+    } else {
+      queries.push({ query: base, tag: c });
+    }
   }
 
   const jobId = clientJobId || randomUUID();
@@ -227,11 +257,26 @@ router.post('/mine-posts', async (req, res) => {
   try {
     logger.progress(5, 'Searching');
     const stats = {};
-    const profiles = await searchProfiles(queries, { logger, pages: Math.max(1, Math.min(3, Number(pages) || 2)), stats });
+    const pageCount = Math.max(1, Math.min(3, Number(pages) || 2));
+    let profiles = await searchProfiles(queries, { logger, pages: pageCount, stats });
+
+    // Second pass: small companies often have nobody matching role+location, so
+    // retry the ones that came back empty with just the company name.
+    const foundFor = new Set(profiles.map((p) => p.company));
+    const missing = companyList.filter((c) => !foundFor.has(c));
+    if (missing.length && (roleList.length || locClause)) {
+      logger.info(`Retrying ${missing.length} company(ies) with no results, company-name only…`);
+      const retry = missing.slice(0, 30).map((c) => ({ query: `site:linkedin.com/in "${c}"`, tag: c }));
+      const more = await searchProfiles(retry, { logger, pages: 1, stats });
+      const seenUrl = new Set(profiles.map((p) => p.url));
+      profiles = [...profiles, ...more.filter((p) => !seenUrl.has(p.url))];
+    }
 
     const excludeJunk = req.body?.excludeJunk !== false;
+    const strict = req.body?.strict !== false;
     const headers = ['Name', 'Designation', 'Seniority', 'Company', 'LinkedIn URL', 'Decision Score'];
     let rows = profiles
+      .filter((p) => !strict || !roleList.length || !clean(p.designation) || roleMatches(`${p.designation} ${p.snippet}`, roleList))
       .map((p) => {
         const c = classifyLead(p);
         return { Name: p.name, Designation: p.designation, Seniority: c.seniority, Company: p.company, 'LinkedIn URL': p.url, 'Decision Score': c.decisionScore, _junk: c.junk };

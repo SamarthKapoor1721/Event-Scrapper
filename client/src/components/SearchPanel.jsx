@@ -33,9 +33,9 @@ export default function SearchPanel() {
       <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center justify-between text-left">
         <span>
           <span className="text-sm font-bold">Find Profiles by Search</span>
-          <span className="ml-2 text-xs text-slate-400">LinkedIn X-ray query → Name, Designation, Link → Excel</span>
+          <span className="ml-2 text-xs text-dim">LinkedIn X-ray query → Name, Designation, Link → Excel</span>
         </span>
-        <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">{open ? 'Hide' : 'Open'}</span>
+        <span className="text-xs font-semibold link-accent">{open ? 'Hide' : 'Open'}</span>
       </button>
 
       {open && (
@@ -47,7 +47,7 @@ export default function SearchPanel() {
             placeholder={'site:linkedin.com/in ("CIO" OR "CTO") Gurgaon ("summit" OR "speaker")\n\n…or paste a full Google search URL — the query is extracted automatically.'}
           />
           <div className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 text-xs text-slate-500">
+            <label className="flex items-center gap-2 text-xs text-dim">
               Result pages
               <input
                 type="number"
@@ -72,13 +72,13 @@ export default function SearchPanel() {
             {result?.csvUrl && <a href={result.csvUrl} className="btn-secondary">Download CSV</a>}
           </div>
 
-          {error && <p className="text-sm font-medium text-red-600 dark:text-red-400">{error}</p>}
-          {result && <p className="text-xs text-slate-400">Found {result.count} profile(s).</p>}
+          {error && <p className="text-sm font-medium text-[var(--danger)]">{error}</p>}
+          {result && <p className="text-xs text-dim">Found {result.count} profile(s).</p>}
 
           {result?.rows?.length > 0 && (
-            <div className="nice-scroll max-h-80 overflow-auto rounded-xl border border-slate-200/70 dark:border-white/10">
+            <div className="nice-scroll max-h-80 overflow-auto rounded-xl border border-token">
               <table className="w-full text-left text-sm">
-                <thead className="sticky top-0 bg-slate-50/95 text-xs font-semibold uppercase tracking-wide text-slate-500 backdrop-blur dark:bg-slate-800/95">
+                <thead className="sticky top-0 thead-bg text-xs font-semibold uppercase tracking-wide text-dim">
                   <tr>
                     <th className="px-3 py-2">Name</th>
                     <th className="px-3 py-2">Designation</th>
@@ -86,14 +86,14 @@ export default function SearchPanel() {
                     <th className="px-3 py-2">LinkedIn</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                <tbody className="divide-y divide-token">
                   {result.rows.map((r, i) => (
-                    <tr key={i} className="hover:bg-indigo-50/40 dark:hover:bg-white/[0.04]">
+                    <tr key={i} className="row-hover">
                       <td className="px-3 py-2 font-medium">{r.Name || '—'}</td>
-                      <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{r.Designation || '—'}</td>
-                      <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{r.Company || '—'}</td>
+                      <td className="px-3 py-2 text-dim">{r.Designation || '—'}</td>
+                      <td className="px-3 py-2 text-dim">{r.Company || '—'}</td>
                       <td className="px-3 py-2">
-                        <a className="text-indigo-600 hover:underline dark:text-indigo-400" href={r['LinkedIn URL']} target="_blank" rel="noreferrer">
+                        <a className="link-accent" href={r['LinkedIn URL']} target="_blank" rel="noreferrer">
                           {r['LinkedIn URL'].replace(/^https?:\/\/(www\.)?linkedin\.com/, '')}
                         </a>
                       </td>

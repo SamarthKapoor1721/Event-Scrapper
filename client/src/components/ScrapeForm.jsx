@@ -26,21 +26,21 @@ export default function ScrapeForm({ form, setForm, busy, onScrape, onGenerateEx
           <input className="input" value={form.companiesUrl} onChange={update('companiesUrl')} placeholder="https://…/partners" />
         </Field>
       </div>
-      <p className="mt-2 text-xs text-slate-400">
+      <p className="mt-2 text-xs text-dim">
         Fill any of the three — all are scraped together and merged into this year, with duplicates removed.
       </p>
 
       {/* LinkedIn enrichment — highlighted primary feature. */}
-      <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-indigo-200/60 bg-indigo-50/70 p-3.5 transition hover:border-indigo-300 dark:border-indigo-500/20 dark:bg-indigo-500/10">
+      <label className="mt-4 flex cursor-pointer items-start gap-3 accent-panel rounded-xl p-3.5">
         <input
           type="checkbox"
-          className="mt-0.5 h-4 w-4 accent-indigo-600"
+          className="mt-0.5 h-4 w-4 accent-lime"
           checked={form.findLinkedIn}
           onChange={(e) => setForm((f) => ({ ...f, findLinkedIn: e.target.checked }))}
         />
         <span>
           <span className="block text-sm font-semibold">Find LinkedIn Profiles</span>
-          <span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">
+          <span className="mt-0.5 block text-xs text-dim">
             After scraping, automatically finds each speaker's most likely LinkedIn profile and scores the match.
             Free — no API key needed. Runs before Excel export; large lists take a few minutes.
           </span>
@@ -50,19 +50,19 @@ export default function ScrapeForm({ form, setForm, busy, onScrape, onGenerateEx
       <button
         type="button"
         onClick={() => setShowAdvanced((v) => !v)}
-        className="mt-3 inline-flex items-center text-xs font-semibold text-indigo-600 transition hover:text-indigo-500 dark:text-indigo-400"
+        className="mt-3 inline-flex items-center text-xs font-semibold link-accent transition"
       >
         {showAdvanced ? 'Hide advanced options' : 'Advanced options (crawl, scope, multi-URL, AI, selectors, fuzzy)'}
       </button>
 
       {showAdvanced && (
-        <div className="mt-3 space-y-4 rounded-xl border border-slate-200/70 bg-slate-50/60 p-4 dark:border-white/10 dark:bg-white/[0.03]">
-          <div className="rounded-xl border border-slate-200/70 bg-white/70 p-3.5 dark:border-white/10 dark:bg-white/5">
+        <div className="mt-3 space-y-4 subpanel rounded-xl p-4">
+          <div className="subpanel rounded-xl p-3.5">
             <label className="flex items-center gap-2 text-sm font-medium">
-              <input type="checkbox" className="h-4 w-4 accent-indigo-600" checked={form.crawl} onChange={(e) => setForm((f) => ({ ...f, crawl: e.target.checked }))} />
+              <input type="checkbox" className="h-4 w-4 accent-lime" checked={form.crawl} onChange={(e) => setForm((f) => ({ ...f, crawl: e.target.checked }))} />
               Crawl whole site (follow same-domain links)
             </label>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            <p className="mt-1 text-xs text-dim">
               Starts from the URL above and follows links on the same domain. Speaker/exhibitor/sponsor pages are visited first.
             </p>
             {form.crawl && (
@@ -78,7 +78,7 @@ export default function ScrapeForm({ form, setForm, busy, onScrape, onGenerateEx
           </div>
           <Field label="Section scope selector (optional) — extract only inside one container">
             <input className="input font-mono text-xs" value={form.scope} onChange={update('scope')} placeholder="#Indiamembers" />
-            <p className="mt-1 text-xs text-slate-400">
+            <p className="mt-1 text-xs text-dim">
               Limits extraction to elements inside this CSS selector — e.g. one country tab. Leave blank to scrape the whole page.
             </p>
           </Field>
@@ -100,14 +100,14 @@ export default function ScrapeForm({ form, setForm, busy, onScrape, onGenerateEx
           </Field>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" className="h-4 w-4 accent-indigo-600" checked={form.useAI} onChange={(e) => setForm((f) => ({ ...f, useAI: e.target.checked }))} />
+              <input type="checkbox" className="h-4 w-4 accent-lime" checked={form.useAI} onChange={(e) => setForm((f) => ({ ...f, useAI: e.target.checked }))} />
               AI fallback
             </label>
             <Field label="Retries">
               <input type="number" min="0" max="5" className="input" value={form.retries} onChange={update('retries')} />
             </Field>
             <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" className="h-4 w-4 accent-indigo-600" checked={form.fuzzy} onChange={(e) => setForm((f) => ({ ...f, fuzzy: e.target.checked }))} />
+              <input type="checkbox" className="h-4 w-4 accent-lime" checked={form.fuzzy} onChange={(e) => setForm((f) => ({ ...f, fuzzy: e.target.checked }))} />
               Fuzzy compare
             </label>
             <Field label="Threshold">
@@ -117,7 +117,7 @@ export default function ScrapeForm({ form, setForm, busy, onScrape, onGenerateEx
           <Field label="Compare years (base → target)">
             <div className="flex items-center gap-2">
               <input className="input" value={form.baseYear} onChange={update('baseYear')} placeholder="2025" />
-              <span className="text-slate-400">→</span>
+              <span className="text-dim">→</span>
               <input className="input" value={form.targetYear} onChange={update('targetYear')} placeholder="2026" />
             </div>
           </Field>
@@ -140,7 +140,7 @@ export default function ScrapeForm({ form, setForm, busy, onScrape, onGenerateEx
         <div className="relative">
           <details className="group">
             <summary className="btn-secondary cursor-pointer list-none">Download / Export</summary>
-            <div className="absolute z-10 mt-1.5 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl dark:border-white/10 dark:bg-slate-800">
+            <div className="menu-surface absolute z-10 mt-1.5 w-48 rounded-xl p-1.5 shadow-xl">
               <DropItem onClick={() => onGenerateExcel(true)}>Excel (.xlsx)</DropItem>
               <DropItem onClick={() => onExport('csv', 'all')}>CSV (speakers+partners)</DropItem>
               <DropItem onClick={() => onExport('json', 'all')}>JSON (speakers+partners)</DropItem>
@@ -156,7 +156,7 @@ function DropItem({ children, onClick }) {
   return (
     <button
       onClick={onClick}
-      className="block w-full rounded-lg px-3 py-2 text-left text-sm transition hover:bg-slate-100 dark:hover:bg-white/10"
+      className="menu-item block w-full rounded-lg px-3 py-2 text-left text-sm"
     >
       {children}
     </button>

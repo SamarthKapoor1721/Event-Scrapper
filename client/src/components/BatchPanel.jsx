@@ -44,9 +44,9 @@ export default function BatchPanel() {
       >
         <span>
           <span className="text-sm font-bold">Batch LinkedIn from CSV</span>
-          <span className="ml-2 text-xs text-slate-400">Name, Designation, Company → LinkedIn URL + confidence</span>
+          <span className="ml-2 text-xs text-dim">Name, Designation, Company → LinkedIn URL + confidence</span>
         </span>
-        <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">{open ? 'Hide' : 'Open'}</span>
+        <span className="text-xs font-semibold link-accent">{open ? 'Hide' : 'Open'}</span>
       </button>
 
       {open && (
@@ -56,7 +56,7 @@ export default function BatchPanel() {
               Upload CSV
               <input type="file" accept=".csv,text/csv" className="hidden" onChange={onFile} />
             </label>
-            <span className="text-xs text-slate-400">or paste below — a header row is auto-detected.</span>
+            <span className="text-xs text-dim">or paste below — a header row is auto-detected.</span>
           </div>
           <textarea
             className="input h-28 font-mono text-xs"
@@ -78,15 +78,15 @@ export default function BatchPanel() {
             {result?.downloadUrl && (
               <a href={result.downloadUrl} className="btn-secondary">Download results CSV</a>
             )}
-            {busy && <span className="text-xs text-slate-400">This can take a few minutes for large lists.</span>}
+            {busy && <span className="text-xs text-dim">This can take a few minutes for large lists.</span>}
           </div>
 
-          {error && <p className="text-sm font-medium text-red-600 dark:text-red-400">{error}</p>}
+          {error && <p className="text-sm font-medium text-[var(--danger)]">{error}</p>}
 
           {result?.rows?.length > 0 && (
-            <div className="nice-scroll max-h-80 overflow-auto rounded-xl border border-slate-200/70 dark:border-white/10">
+            <div className="nice-scroll max-h-80 overflow-auto rounded-xl border border-token">
               <table className="w-full text-left text-sm">
-                <thead className="sticky top-0 bg-slate-50/95 text-xs font-semibold uppercase tracking-wide text-slate-500 backdrop-blur dark:bg-slate-800/95">
+                <thead className="sticky top-0 thead-bg text-xs font-semibold uppercase tracking-wide text-dim">
                   <tr>
                     <th className="px-3 py-2">Name</th>
                     <th className="px-3 py-2">Company</th>
@@ -95,18 +95,18 @@ export default function BatchPanel() {
                     <th className="px-3 py-2">LinkedIn</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                <tbody className="divide-y divide-token">
                   {result.rows.map((r, i) => (
-                    <tr key={i} className="hover:bg-indigo-50/40 dark:hover:bg-white/[0.04]">
+                    <tr key={i} className="row-hover">
                       <td className="px-3 py-2 font-medium">{r.Name}</td>
-                      <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{r.Company || '—'}</td>
+                      <td className="px-3 py-2 text-dim">{r.Company || '—'}</td>
                       <td className="px-3 py-2">
                         <StatusPill status={r.Status} />
                       </td>
-                      <td className="px-3 py-2 tabular-nums text-slate-500">{r.Confidence || '—'}</td>
+                      <td className="px-3 py-2 tabular-nums text-dim">{r.Confidence || '—'}</td>
                       <td className="px-3 py-2">
                         {r['LinkedIn URL'] ? (
-                          <a className="text-indigo-600 hover:underline dark:text-indigo-400" href={r['LinkedIn URL']} target="_blank" rel="noreferrer">
+                          <a className="link-accent" href={r['LinkedIn URL']} target="_blank" rel="noreferrer">
                             {r['LinkedIn URL'].replace(/^https?:\/\/(www\.)?linkedin\.com/, '')}
                           </a>
                         ) : (
@@ -127,10 +127,6 @@ export default function BatchPanel() {
 
 function StatusPill({ status }) {
   const cls =
-    status === 'Found'
-      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
-      : status === 'Not Found'
-        ? 'bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-300'
-        : 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300';
-  return <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${cls}`}>{status}</span>;
+    status === 'Found' ? 'pill-success' : status === 'Not Found' ? 'pill-muted' : 'pill-warning';
+  return <span className={`pill ${cls}`}>{status}</span>;
 }

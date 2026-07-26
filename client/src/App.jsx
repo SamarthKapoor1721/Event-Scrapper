@@ -38,7 +38,7 @@ const DEFAULT_FORM = {
 export default function App() {
   const [form, setForm] = useState(DEFAULT_FORM);
   const [view, setView] = useState('scraper'); // 'scraper' | 'people'
-  const [dark, setDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches);
+  const [dark, setDark] = useState(true);
   const [busy, setBusy] = useState(false);
   const [logs, setLogs] = useState([]);
   const [progress, setProgress] = useState({ percent: 0, label: 'Idle' });
@@ -49,7 +49,8 @@ export default function App() {
   const esRef = useRef(null);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark);
+    // Dark is the design's default; `light` flips the CSS custom properties.
+    document.documentElement.classList.toggle('light', !dark);
   }, [dark]);
 
   useEffect(() => {
@@ -233,76 +234,137 @@ export default function App() {
     a.click();
   }
 
+  const NAV = [
+    ['scraper', 'Conference Scraper', 'M12 3a9 9 0 100 18 9 9 0 000-18zm0 5a4 4 0 100 8 4 4 0 000-8z'],
+    ['people', 'Find People', 'M9 11a3 3 0 100-6 3 3 0 000 6zm-5.5 9c0-3.6 2.8-6 5.5-6s5.5 2.4 5.5 6M18 11.4a2.4 2.4 0 100-4.8 2.4 2.4 0 000 4.8zM15.5 20c.2-2.6 1.7-4.4 3.7-4.7'],
+    ['posts', 'Company POC Miner', 'M4 9h7v11H4zM13 4h7v16h-7zM6.5 12h2M15.5 7h2M15.5 11h2'],
+    ['events', 'Event Finder', 'M12 3a9 9 0 100 18 9 9 0 000-18zm3 6l-2 4-4 2 2-4z'],
+    ['clean', 'Dedupe & Clean', 'M7 7h12v12H7zM5 15H4a1 1 0 01-1-1V4a1 1 0 011-1h10a1 1 0 011 1v1'],
+  ];
+  const TITLES = {
+    scraper: ['Conference Scraper', 'Extract speakers & companies from an event site'],
+    people: ['Find People & LinkedIn Enrichment', 'Match extracted speakers to verified LinkedIn profiles'],
+    posts: ['Company POC Miner', 'Mine company posts to surface points of contact'],
+    events: ['Event Finder', 'Discover related events to source new leads'],
+    clean: ['Dedupe & Clean List', 'Subtract and clean contact lists'],
+  };
+  const [screenTitle, screenSubtitle] = TITLES[view] || TITLES.scraper;
+
   return (
-    <div className="min-h-screen">
-      <header className="sticky top-4 z-50 mx-auto max-w-5xl rounded-[1.5rem] border border-white/40 bg-white/60 px-2 py-2 shadow-[0_8px_30px_rgb(0,0,0,0.06)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/60 dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)]">
-        <div className="flex items-center justify-between px-3">
-          <div className="flex items-center gap-6">
-            <h1 className="flex items-center gap-1.5 text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
-              <svg className="h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              Event<span className="gradient-text font-extrabold">Scout</span>
-            </h1>
-            <nav className="hidden items-center gap-1.5 rounded-2xl bg-white/50 p-1.5 shadow-sm dark:bg-black/20 md:flex">
-              {[
-                ['scraper', 'Scraper'],
-                ['people', 'Find People'],
-                ['posts', 'Company POCs'],
-                ['events', 'Event Finder'],
-                ['clean', 'Dedupe'],
-              ].map(([key, label]) => (
-                <button
-                  key={key}
-                  onClick={() => setView(key)}
-                  className={`rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-300 ${
-                    view === key
-                      ? 'bg-white text-indigo-600 shadow-md dark:bg-indigo-500/20 dark:text-indigo-300'
-                      : 'text-slate-500 hover:bg-white/40 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-200'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </nav>
-          </div>
-          <button
-            onClick={() => setDark((d) => !d)}
-            className="flex items-center justify-center rounded-xl bg-white/50 p-2.5 text-slate-600 shadow-sm transition hover:bg-white hover:text-indigo-600 dark:bg-black/20 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-indigo-400"
-            title="Toggle dark mode"
+    <div className="flex min-h-screen">
+      {/* Sidebar */}
+      <aside
+        className="flex w-[250px] flex-shrink-0 flex-col px-3.5 pb-4 pt-[22px]"
+        style={{ background: 'var(--surface)', borderRight: '1px solid var(--border)' }}
+      >
+        <div className="flex items-center gap-2.5 px-2 pb-[22px]">
+          <div
+            className="flex h-[30px] w-[30px] flex-shrink-0 items-center justify-center rounded-[7px]"
+            style={{ background: 'var(--accent)' }}
           >
-            {dark ? (
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--accent-ink)" strokeWidth="2">
+              <circle cx="11" cy="11" r="7" />
+              <line x1="21" y1="21" x2="16.2" y2="16.2" />
+            </svg>
+          </div>
+          <div>
+            <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 15, color: 'var(--text)', letterSpacing: '-.01em' }}>
+              EventScout
+            </div>
+            <div className="mono" style={{ fontSize: 10, color: 'var(--text-dim)', letterSpacing: '.04em' }}>
+              scraper ops
+            </div>
+          </div>
+        </div>
+
+        <div className="eyebrow px-2.5 pb-2">WORKFLOWS</div>
+
+        {NAV.map(([key, label, d]) => {
+          const active = view === key;
+          return (
+            <button
+              key={key}
+              onClick={() => setView(key)}
+              aria-current={active ? 'page' : undefined}
+              className="nav-btn mb-0.5 flex w-full items-center gap-[11px] rounded-lg px-3 py-2.5 text-left text-[13px]"
+              style={{
+                background: active ? 'var(--surface2)' : 'transparent',
+                color: active ? 'var(--text)' : 'var(--text-dim)',
+                fontWeight: active ? 600 : 500,
+                borderLeft: `2px solid ${active ? 'var(--accent)' : 'transparent'}`,
+              }}
+            >
+              <svg
+                className="nav-icon"
+                width="17"
+                height="17"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+              >
+                <path d={d} />
               </svg>
-            ) : (
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-              </svg>
-            )}
+              <span>{label}</span>
+            </button>
+          );
+        })}
+
+        <div className="flex-1" />
+
+        <div
+          className="flex items-center justify-between px-2.5 py-2.5"
+          style={{ borderTop: '1px solid var(--border)', marginTop: 10 }}
+        >
+          <span className="text-xs" style={{ color: 'var(--text-dim)' }}>Theme</span>
+          <button
+            onClick={() => setDark((v) => !v)}
+            className="relative h-[22px] w-[38px] rounded-full border-none p-0"
+            style={{ background: dark ? 'var(--border)' : 'var(--accent)', cursor: 'pointer' }}
+            title="Toggle theme"
+          >
+            <div
+              className="absolute h-4 w-4 rounded-full transition-all"
+              style={{ background: dark ? 'var(--text-dim)' : 'var(--accent-ink)', top: 3, left: dark ? 3 : 19 }}
+            />
           </button>
         </div>
-      </header>
+      </aside>
 
+      {/* Main column */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header
+          className="flex h-16 flex-shrink-0 items-center justify-between px-7"
+          style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg)' }}
+        >
+          <div>
+            <div style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: 19, color: 'var(--text)' }}>
+              {screenTitle}
+            </div>
+            <div style={{ fontSize: 12.5, color: 'var(--text-dim)', marginTop: 1 }}>{screenSubtitle}</div>
+          </div>
+        </header>
+
+        <div className="flex-1 overflow-auto">
       {view === 'people' ? (
-        <main className="mx-auto max-w-6xl space-y-5 px-4 py-7">
+        <main className="space-y-5 p-7">
           <FindPeoplePanel />
           <DedupePanel />
         </main>
       ) : view === 'posts' ? (
-        <main className="mx-auto max-w-6xl px-4 py-7">
+        <main className="p-7">
           <PostMinerPanel />
         </main>
       ) : view === 'events' ? (
-        <main className="mx-auto max-w-6xl px-4 py-7">
+        <main className="p-7">
           <EventFinderPanel onScrapeEvent={handleScrapeEvent} />
         </main>
       ) : view === 'clean' ? (
-        <main className="mx-auto max-w-6xl px-4 py-7">
+        <main className="p-7">
           <CleanListPanel />
         </main>
       ) : (
-      <main className="mx-auto max-w-6xl space-y-5 px-4 py-7">
+      <main className="space-y-5 p-7">
         <ScrapeForm
           form={form}
           setForm={setForm}
@@ -319,26 +381,27 @@ export default function App() {
 
         {years.length > 0 && (
           <div className="card animate-fade-up p-4">
-            <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Stored years</div>
+            <div className="field-label mb-3">Stored years</div>
             <div className="flex flex-wrap gap-2.5">
               {years.map((y) => (
-                <div
-                  key={y.year}
-                  className="group flex items-center gap-3 rounded-xl border border-slate-200/70 bg-slate-50/70 py-2 pl-3 pr-2 transition hover:border-indigo-300/70 hover:bg-white dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
-                >
-                  <span className="text-base font-extrabold tracking-tight text-slate-800 dark:text-slate-100">{y.year}</span>
+                <div key={y.year} className="year-chip flex items-center gap-3 rounded-xl py-2 pl-3 pr-2">
+                  <span className="mono text-base font-bold tracking-tight text-main">{y.year}</span>
                   <span className="flex gap-1.5 text-[11px] font-semibold">
-                    <span className="rounded-md bg-indigo-50 px-2 py-0.5 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
-                      {y.speakers} speakers
-                    </span>
-                    <span className="rounded-md bg-violet-50 px-2 py-0.5 text-violet-600 dark:bg-violet-500/15 dark:text-violet-300">
+                    <span className="badge-accent">{y.speakers} speakers</span>
+                    <span
+                      className="rounded-md px-2 py-0.5"
+                      style={{
+                        background: 'color-mix(in srgb, var(--info) 16%, transparent)',
+                        color: 'var(--info)',
+                      }}
+                    >
                       {y.companies} partners
                     </span>
                   </span>
                   <button
                     onClick={() => handleDeleteYear(y.year)}
                     title={`Delete ${y.year}`}
-                    className="rounded-lg px-2 py-1 text-xs font-medium text-slate-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                    className="chip-remove rounded-lg px-2 py-1 text-xs font-medium"
                   >
                     Remove
                   </button>
@@ -359,17 +422,27 @@ export default function App() {
 
         <BatchPanel />
 
-        <footer className="pt-4 text-center text-xs text-slate-400">
+        <footer className="pt-4 text-center text-xs text-dim">
           Playwright → Puppeteer → Axios fallback · heuristic + optional AI extraction · free LinkedIn enrichment
         </footer>
       </main>
       )}
+        </div>
+      </div>
 
       {toast && (
         <div
-          className={`animate-fade-up fixed bottom-5 right-5 z-50 max-w-sm rounded-xl px-4 py-3 text-sm font-medium text-white shadow-xl ${
-            toast.type === 'error' ? 'bg-red-600' : toast.type === 'success' ? 'bg-emerald-600' : 'bg-slate-800'
-          }`}
+          className="animate-fade-up fixed bottom-5 right-5 z-50 max-w-sm rounded-lg px-4 py-3 text-[13px] font-medium"
+          style={{
+            background: 'var(--surface2)',
+            border: '1px solid var(--border)',
+            color:
+              toast.type === 'error'
+                ? 'var(--danger)'
+                : toast.type === 'success'
+                  ? 'var(--success)'
+                  : 'var(--text)',
+          }}
         >
           {toast.message}
         </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api';
+import Picker from './Picker';
 
 const ROLE_PRESETS = ['CIO', 'CTO', 'CISO', 'CHRO', 'HR Head', 'CMO', 'CFO', 'CEO', 'Marketing', 'Digital', 'Data & AI', 'Cybersecurity', 'Supply Chain'];
 const INDUSTRY_PRESETS = ['Healthcare', 'Real Estate', 'Fintech', 'IT', 'SaaS', 'Manufacturing', 'Retail', 'BFSI', 'EdTech'];
@@ -38,15 +39,15 @@ export default function EventFinderPanel({ onScrapeEvent }) {
   return (
     <div className="space-y-5">
       <div className="card animate-fade-up p-5 sm:p-6">
-        <h2 className="text-lg font-bold">Find Events, Summits &amp; Roundtables</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <h2 className="card-title text-[15px]">Find Events, Summits &amp; Roundtables</h2>
+        <p className="mt-1 text-sm text-dim">
           Discover summits / conferences / roundtables for specific roles or industries in a location — then scrape
           their speaker pages (via the Scraper tab) or use the LinkedIn leads found directly.
         </p>
 
         <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          <Picker label="Roles / topics" options={ROLE_PRESETS} values={topics} setValues={setTopics} placeholder="Add a role/topic…" addPlaceholder="Custom topic" />
-          <Picker label="Industries (optional)" options={INDUSTRY_PRESETS} values={inds} setValues={setInds} placeholder="Add an industry…" addPlaceholder="Custom industry" />
+          <Picker label="Roles / topics" options={ROLE_PRESETS} values={topics} setValues={setTopics} placeholder="Search roles or add…" />
+          <Picker label="Industries (optional)" options={INDUSTRY_PRESETS} values={inds} setValues={setInds} placeholder="Search industries or add…" />
           <div className="space-y-4">
             <label className="block">
               <span className="field-label">Location</span>
@@ -80,21 +81,21 @@ export default function EventFinderPanel({ onScrapeEvent }) {
           {result?.leadsUrl && <a href={result.leadsUrl} className="btn-secondary">Download leads</a>}
         </div>
 
-        {error && <p className="mt-3 text-sm font-medium text-red-600 dark:text-red-400">{error}</p>}
+        {error && <p className="mt-3 text-sm font-medium text-[var(--danger)]">{error}</p>}
         {result?.note && (
-          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">⚠ {result.note}</p>
+          <p className="mt-3 rounded-lg px-3 py-2 text-sm font-medium text-[var(--warning)] bg-[var(--surface2)]">⚠ {result.note}</p>
         )}
-        {result && <p className="mt-3 text-xs text-slate-400">{result.events?.length || 0} events · {result.profiles?.length || 0} LinkedIn leads.</p>}
+        {result && <p className="mt-3 text-xs text-dim">{result.events?.length || 0} events · {result.profiles?.length || 0} LinkedIn leads.</p>}
       </div>
 
       {result && (result.events?.length > 0 || result.profiles?.length > 0) && (
         <div className="card animate-fade-up overflow-hidden">
-          <div className="flex gap-1 border-b border-slate-200/70 p-2 dark:border-white/10">
+          <div className="flex gap-1 border-b border-token p-2">
             {[['events', `Events (${result.events?.length || 0})`], ['profiles', `LinkedIn leads (${result.profiles?.length || 0})`]].map(([key, label]) => (
               <button
                 key={key}
                 onClick={() => setTab(key)}
-                className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition ${tab === key ? 'bg-indigo-600 text-white shadow-sm dark:bg-indigo-500' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-white/5'}`}
+                className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition ${tab === key ? 'tab-active' : 'text-dim hover:bg-[var(--surface2)]'}`}
               >
                 {label}
               </button>
@@ -103,23 +104,23 @@ export default function EventFinderPanel({ onScrapeEvent }) {
           <div className="nice-scroll max-h-[30rem] overflow-auto">
             {tab === 'events' ? (
               <table className="w-full text-left text-sm">
-                <thead className="sticky top-0 bg-slate-50/95 text-xs font-semibold uppercase tracking-wide text-slate-500 backdrop-blur dark:bg-slate-800/95">
+                <thead className="sticky top-0 thead-bg text-xs font-semibold uppercase tracking-wide text-dim">
                   <tr><th className="px-4 py-2.5">Event</th><th className="px-4 py-2.5">Link</th><th className="px-4 py-2.5"></th></tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                <tbody className="divide-y divide-token">
                   {result.events.map((e, i) => (
-                    <tr key={i} className="transition hover:bg-indigo-50/40 dark:hover:bg-white/[0.04]">
+                    <tr key={i} className="transition row-hover">
                       <td className="px-4 py-2.5">
                         <div className="font-semibold">{e.Event || '—'}</div>
-                        {e.About && <div className="text-xs text-slate-400 line-clamp-2">{e.About}</div>}
+                        {e.About && <div className="text-xs text-dim line-clamp-2">{e.About}</div>}
                       </td>
                       <td className="px-4 py-2.5">
-                        <a className="text-indigo-600 hover:underline dark:text-indigo-400" href={e.URL} target="_blank" rel="noreferrer">{hostOf(e.URL)}</a>
+                        <a className="link-accent" href={e.URL} target="_blank" rel="noreferrer">{hostOf(e.URL)}</a>
                       </td>
                       <td className="px-4 py-2.5 text-right">
                         <button
                           onClick={() => onScrapeEvent?.(e.URL)}
-                          className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-indigo-500"
+                          className="btn-primary !px-3 !py-1.5 !text-xs"
                           title="Scrape this event's speakers"
                         >
                           Scrape speakers
@@ -131,17 +132,17 @@ export default function EventFinderPanel({ onScrapeEvent }) {
               </table>
             ) : (
               <table className="w-full text-left text-sm">
-                <thead className="sticky top-0 bg-slate-50/95 text-xs font-semibold uppercase tracking-wide text-slate-500 backdrop-blur dark:bg-slate-800/95">
+                <thead className="sticky top-0 thead-bg text-xs font-semibold uppercase tracking-wide text-dim">
                   <tr><th className="px-4 py-2.5">Name</th><th className="px-4 py-2.5">Designation</th><th className="px-4 py-2.5">Company</th><th className="px-4 py-2.5">LinkedIn</th></tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                <tbody className="divide-y divide-token">
                   {result.profiles.map((r, i) => (
-                    <tr key={i} className="transition hover:bg-indigo-50/40 dark:hover:bg-white/[0.04]">
+                    <tr key={i} className="transition row-hover">
                       <td className="px-4 py-2.5 font-semibold">{r.Name}</td>
-                      <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{r.Designation || '—'}</td>
-                      <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400">{r.Company || '—'}</td>
+                      <td className="px-4 py-2.5 text-dim">{r.Designation || '—'}</td>
+                      <td className="px-4 py-2.5 text-dim">{r.Company || '—'}</td>
                       <td className="px-4 py-2.5">
-                        <a className="text-indigo-600 hover:underline dark:text-indigo-400" href={r['LinkedIn URL']} target="_blank" rel="noreferrer">{r['LinkedIn URL'].replace(/^https?:\/\/(www\.)?linkedin\.com/, '')}</a>
+                        <a className="link-accent" href={r['LinkedIn URL']} target="_blank" rel="noreferrer">{r['LinkedIn URL'].replace(/^https?:\/\/(www\.)?linkedin\.com/, '')}</a>
                       </td>
                     </tr>
                   ))}
@@ -163,41 +164,3 @@ function hostOf(url) {
   }
 }
 
-/** Dropdown + free-text add, with the chosen values shown as removable chips. */
-function Picker({ label, options, values, setValues, placeholder, addPlaceholder }) {
-  const [custom, setCustom] = useState('');
-  const add = (v) => {
-    const t = (v || '').trim();
-    if (t && !values.some((x) => x.toLowerCase() === t.toLowerCase())) setValues([...values, t]);
-  };
-  const available = options.filter((o) => !values.some((x) => x.toLowerCase() === o.toLowerCase()));
-  return (
-    <div>
-      <span className="field-label">{label}</span>
-      <select className="input" value="" onChange={(e) => { add(e.target.value); e.target.value = ''; }}>
-        <option value="">{placeholder}</option>
-        {available.map((o) => <option key={o} value={o}>{o}</option>)}
-      </select>
-      <div className="mt-2 flex gap-2">
-        <input
-          className="input text-sm"
-          value={custom}
-          onChange={(e) => setCustom(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(custom); setCustom(''); } }}
-          placeholder={addPlaceholder}
-        />
-        <button type="button" onClick={() => { add(custom); setCustom(''); }} className="btn-secondary shrink-0 px-3 py-2">Add</button>
-      </div>
-      {values.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {values.map((v) => (
-            <span key={v} className="inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-2.5 py-1 text-xs font-semibold text-white dark:bg-indigo-500">
-              {v}
-              <button type="button" onClick={() => setValues(values.filter((x) => x !== v))} className="text-white/80 hover:text-white">×</button>
-            </span>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}

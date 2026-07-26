@@ -51,8 +51,8 @@ export default function CleanListPanel() {
   return (
     <div className="space-y-5">
       <div className="card animate-fade-up p-5 sm:p-6">
-        <h2 className="text-lg font-bold">Remove People You Already Have</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <h2 className="card-title text-[15px]">Remove People You Already Have</h2>
+        <p className="mt-1 text-sm text-dim">
           Upload your existing master list(s) and your new list(s) — the people already in your master are removed, and
           the new list is deduped against itself. Accepts CSV, XLSX, XLS and JSON (multiple files each).
         </p>
@@ -85,18 +85,18 @@ export default function CleanListPanel() {
           </button>
         </div>
 
-        {error && <p className="mt-3 text-sm font-medium text-red-600 dark:text-red-400">{error}</p>}
+        {error && <p className="mt-3 text-sm font-medium text-[var(--danger)]">{error}</p>}
 
         {result && (
-          <div className="mt-4 rounded-xl border border-slate-200/70 bg-slate-50/70 p-4 dark:border-white/10 dark:bg-white/5">
+          <div className="mt-4 subpanel rounded-xl p-4">
             <p className="text-sm">
-              <span className="font-bold text-emerald-600 dark:text-emerald-400">{result.kept}</span> new unique people kept
+              <span className="font-bold text-[var(--success)]">{result.kept}</span> new unique people kept
               {' · '}
               <span className="font-semibold">{result.removedMaster}</span> already in your master
               {' · '}
               <span className="font-semibold">{result.removedDup}</span> internal duplicates
               {' '}
-              <span className="text-slate-400">(matched by {result.keyBy})</span>.
+              <span className="text-dim">(matched by {result.keyBy})</span>.
             </p>
             <div className="mt-3 flex gap-2">
               <a href={result.downloadUrl} className="btn-secondary">Download Excel</a>
@@ -110,18 +110,18 @@ export default function CleanListPanel() {
         <div className="card animate-fade-up overflow-hidden">
           <div className="nice-scroll max-h-[30rem] overflow-auto">
             <table className="w-full text-left text-sm">
-              <thead className="sticky top-0 bg-slate-50/95 text-xs font-semibold uppercase tracking-wide text-slate-500 backdrop-blur dark:bg-slate-800/95">
+              <thead className="sticky top-0 thead-bg text-xs font-semibold uppercase tracking-wide text-dim">
                 <tr>
                   {Object.keys(result.rows[0]).slice(0, 6).map((h) => (
                     <th key={h} className="px-4 py-2.5">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+              <tbody className="divide-y divide-token">
                 {result.rows.map((r, i) => (
-                  <tr key={i} className="transition hover:bg-indigo-50/40 dark:hover:bg-white/[0.04]">
+                  <tr key={i} className="transition row-hover">
                     {Object.keys(result.rows[0]).slice(0, 6).map((h) => (
-                      <td key={h} className="px-4 py-2.5 text-slate-600 dark:text-slate-300">{String(r[h] ?? '')}</td>
+                      <td key={h} className="px-4 py-2.5 text-dim">{String(r[h] ?? '')}</td>
                     ))}
                   </tr>
                 ))}
@@ -143,10 +143,10 @@ function FileBucket({ label, files, setFiles }) {
         multiple
         accept=".csv,.tsv,.xlsx,.xls,.json,text/csv,application/json"
         onChange={(e) => setFiles(Array.from(e.target.files || []))}
-        className="block w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-indigo-500"
+        className="file-input"
       />
       {files.length > 0 && (
-        <p className="mt-1.5 text-xs text-slate-400">{files.map((f) => f.name).join(', ')}</p>
+        <p className="mt-1.5 text-xs text-dim">{files.map((f) => f.name).join(', ')}</p>
       )}
     </div>
   );
