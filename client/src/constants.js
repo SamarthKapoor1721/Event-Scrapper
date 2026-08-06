@@ -38,6 +38,12 @@ export const INDUSTRY_PRESETS = [
   'Healthcare', 'Real Estate', 'Fintech', 'Insurance', 'IT Services', 'SaaS',
   'Manufacturing', 'Ecommerce', 'EdTech', 'Logistics', 'Automotive', 'Telecom',
   'Energy', 'Hospitality', 'Media', 'Consulting', 'Cybersecurity', 'AI', 'FMCG',
+  'Media Agency', 'Performance Marketing', 'Digital Marketing', 'Advertising',
+  'Creative Agency', 'AdTech', 'MarTech', 'Programmatic Advertising',
+  'Affiliate Marketing', 'Influencer Marketing', 'Social Media Marketing',
+  'Search Marketing', 'Content Marketing', 'OOH Advertising',
+  'Experiential Marketing', 'PR & Communications', 'Market Research',
+  'D2C', 'Gaming', 'OTT & Streaming',
 ];
 
 export const EVENT_KEYWORDS = ['summit', 'speaker', 'panel', 'conference', 'roundtable'];

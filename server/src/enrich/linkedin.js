@@ -245,6 +245,19 @@ function looksLikeChallenge(html) {
   );
 }
 
+/**
+ * A genuine "no results" page (narrow site: query that matched nothing) looks a
+ * lot like a block: small page, no profile links. Detecting it explicitly keeps
+ * us from waiting on a non-existent CAPTCHA and from tripping the circuit
+ * breaker on companies that simply have no matching people.
+ */
+function looksLikeEmptyResults(html) {
+  return (
+    /did not match any documents|no results found|your search .{0,80} did not match|nothing matched your search/i.test(html) &&
+    !/linkedin\.com\/in\//i.test(html)
+  );
+}
+
 async function parseResults(html, decode) {
   const { load } = await import('cheerio');
   const $ = load(html);
@@ -280,14 +293,24 @@ async function searchKeyless(page, query, logger, ctx) {
       try {
         await gotoSafe(page, engine.url(query), { waitUntil: 'domcontentloaded', timeout: 25000 });
         await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
-        const html = await page.content();
+        let html = await page.content();
         if (looksLikeChallenge(html)) {
           if (ctx) ctx.blocked = true;
-          if (attempt === 0) {
+          if (ctx?.headful && await waitForManualSolve(page, logger)) {
+            // Solving the challenge often lands on a confirmation/home page, not
+            // the results — re-run the actual query instead of trusting whatever
+            // page we ended up on (that silently produced 0 results for everyone).
+            await gotoSafe(page, engine.url(query), { waitUntil: 'domcontentloaded', timeout: 25000 });
+            await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+            html = await page.content();
+            if (looksLikeChallenge(html)) break; // still blocked — try next engine
+            if (ctx) ctx.blocked = false;
+          } else if (attempt === 0) {
             await delay(3000 + Math.floor(Math.random() * 2000));
             continue;
+          } else {
+            break; // try next engine
           }
-          break; // try next engine
         }
         const found = await parseResults(html, engine.decode);
         if (found.length) return found;
@@ -549,6 +572,19 @@ async function enrichOne(person, ctx, logger) {
 
 const HEADFUL = /^(1|true|yes|on)$/i.test(process.env.HEADFUL || '');
 
+/** Best-effort: bring the visible Chromium window to the front (macOS only —
+ *  it launches unfocused/behind other windows, easy to miss when a CAPTCHA appears). */
+async function bringToFront() {
+  if (process.platform !== 'darwin') return;
+  try {
+    const { execFile } = await import('node:child_process');
+    const script = 'tell application "Google Chrome for Testing" to activate';
+    await new Promise((resolve) => execFile('osascript', ['-e', script], () => resolve()));
+  } catch {
+    /* best-effort only */
+  }
+}
+
 /**
  * Open a browser context for searching. With HEADFUL=1 it opens a VISIBLE window
  * backed by a persistent profile — so you can solve a CAPTCHA by hand once and it
@@ -569,6 +605,7 @@ async function openSearchContext(logger) {
       const dir = path.join(os.tmpdir(), 'event-scraper-profile');
       const context = await chromium.launchPersistentContext(dir, { headless: false, args, viewport: { width: 1280, height: 900 }, userAgent: UA });
       await context.addCookies(consent).catch(() => {});
+      await bringToFront();
       logger?.info('Visible browser (HEADFUL) — solve any CAPTCHA in the window; it will be remembered.');
       return { context, headful: true, close: async () => { await context.close().catch(() => {}); } };
     }
@@ -584,6 +621,7 @@ async function openSearchContext(logger) {
 
 /** In headful mode, wait for the user to solve a shown CAPTCHA (up to ~2 min). */
 async function waitForManualSolve(page, logger) {
+  await bringToFront();
   logger?.warn('⚠ CAPTCHA shown — please solve it in the browser window (waiting up to 2 min)…');
   const deadline = Date.now() + 120000;
   while (Date.now() < deadline) {
@@ -624,26 +662,39 @@ async function createSession(opts) {
   // small batches (where it adds accuracy) and skip it for large ones unless
   // explicitly requested via opts.validate.
   const validate = opts.validate ?? total <= 25;
-  const concurrency = mode === 'braveApi' ? opts.concurrency || 3 : 1;
+  // HEADFUL=1 opens one visible, solvable window — a single worker only (a
+  // person can't solve a CAPTCHA in several tabs racing at once).
+  const concurrency = HEADFUL ? 1 : mode === 'braveApi' ? opts.concurrency || 3 : 1;
   const workers = Math.max(1, Math.min(concurrency, total));
 
   // A browser is needed for keyless search and for profile validation. Reuse a
   // single browser with one page per worker (limits launches).
   let browser = null;
+  let persistentContext = null;
   const pages = [];
   const contexts = [];
-  if (mode === 'keyless' || validate) browser = await launchBrowser(opts.logger);
-  if (browser) {
-    for (let i = 0; i < workers; i++) {
-      const context = await browser.newContext({ userAgent: UA, viewport: { width: 1280, height: 900 } });
-      contexts.push(context);
-      pages.push(await context.newPage());
+  if (HEADFUL && (mode === 'keyless' || validate)) {
+    const session = await openSearchContext(opts.logger);
+    if (session) {
+      persistentContext = session.context;
+      contexts.push(persistentContext);
+      pages.push(await persistentContext.newPage());
+    }
+  } else if (mode === 'keyless' || validate) {
+    browser = await launchBrowser(opts.logger);
+    if (browser) {
+      for (let i = 0; i < workers; i++) {
+        const context = await browser.newContext({ userAgent: UA, viewport: { width: 1280, height: 900 } });
+        contexts.push(context);
+        pages.push(await context.newPage());
+      }
     }
   }
 
   // Recreate a worker's page/context after a renderer crash so the rest of the
   // list still gets processed (long runs occasionally crash a tab).
   async function recreate(wi) {
+    if (persistentContext) return persistentContext.newPage();
     if (!browser) return null;
     try {
       await contexts[wi]?.close();
@@ -655,7 +706,19 @@ async function createSession(opts) {
     pages[wi] = await context.newPage();
     return pages[wi];
   }
-  return { mode, validate, browser, workers, pages, recreate };
+  return {
+    mode,
+    validate,
+    browser,
+    headful: Boolean(persistentContext),
+    workers,
+    pages,
+    recreate,
+    close: async () => {
+      if (persistentContext) await persistentContext.close().catch(() => {});
+      else if (browser) await browser.close().catch(() => {});
+    },
+  };
 }
 
 /**
@@ -685,15 +748,16 @@ export async function enrichPeople(people = [], opts = {}) {
 
   logger?.info(`LinkedIn discovery: ${pending.length} profile(s) via ${process.env.BRAVE_API_KEY ? 'Brave Search API' : 'keyless browser search'}.`);
   const session = await createSession({ ...opts, total: pending.length });
-  if (session.mode === 'keyless' && !session.browser) {
+  if (session.mode === 'keyless' && !session.pages.length) {
     logger?.error('LinkedIn search unavailable (no browser) — all Not Found.');
     return results;
   }
+  if (session.headful) logger?.info('Visible browser (HEADFUL) — solve any CAPTCHA in the window; it will be remembered.');
 
   let next = 0;
   let blockStreak = 0; // consecutive lookups where the engines throttled us
   async function worker(wi) {
-    const ctx = { mode: session.mode, page: session.pages[wi] || null, validate: session.validate };
+    const ctx = { mode: session.mode, page: session.pages[wi] || null, validate: session.validate, headful: session.headful };
     while (true) {
       const k = next++;
       if (k >= pending.length) break;
@@ -734,9 +798,15 @@ export async function enrichPeople(people = [], opts = {}) {
         if (ctx.blocked && !r.linkedin_url) blockStreak += 1;
         else if (r.linkedin_url) blockStreak = 0;
         if (blockStreak >= 4) {
-          logger?.warn('Search engines are rate-limiting — pausing 45s to recover…');
-          await delay(45000);
-          if (session.browser) ctx.page = await session.recreate(wi);
+          if (session.headful && ctx.page) {
+            // Visible window — let the user solve the CAPTCHA by hand instead of
+            // just waiting it out blind.
+            await waitForManualSolve(ctx.page, logger);
+          } else {
+            logger?.warn('Search engines are rate-limiting — pausing 45s to recover…');
+            await delay(45000);
+            if (session.browser) ctx.page = await session.recreate(wi);
+          }
           blockStreak = 0;
         }
         await delay(1200 + Math.floor(Math.random() * 1300));
@@ -747,7 +817,7 @@ export async function enrichPeople(people = [], opts = {}) {
   try {
     await Promise.all(Array.from({ length: session.workers }, (_, wi) => worker(wi)));
   } finally {
-    if (session.browser) await session.browser.close().catch(() => {});
+    await session.close();
     await flushCache();
   }
 
@@ -901,6 +971,26 @@ const INDUSTRY_SYNONYMS = {
   cybersecurity: ['cybersecurity', 'security', 'infosec'],
   ai: ['artificial intelligence', 'machine learning', 'data science'],
   fmcg: ['fmcg', 'consumer goods', 'cpg'],
+  'media agency': ['media agency', 'media buying', 'media planning', 'advertising agency', 'ad agency', 'digital agency'],
+  'performance marketing': ['performance marketing', 'growth marketing', 'paid media', 'paid marketing', 'user acquisition', 'demand generation'],
+  'digital marketing': ['digital marketing', 'online marketing', 'digital media', 'growth marketing'],
+  advertising: ['advertising', 'ad agency', 'advertising agency', 'brand advertising'],
+  'creative agency': ['creative agency', 'creative studio', 'brand agency', 'design agency', 'integrated agency'],
+  adtech: ['adtech', 'ad tech', 'advertising technology', 'demand side platform', 'dsp', 'ssp'],
+  martech: ['martech', 'marketing technology', 'marketing automation', 'crm'],
+  'programmatic advertising': ['programmatic', 'programmatic advertising', 'programmatic media', 'rtb', 'demand side platform'],
+  'affiliate marketing': ['affiliate marketing', 'affiliate', 'partner marketing', 'performance network'],
+  'influencer marketing': ['influencer marketing', 'influencer', 'creator marketing', 'creator economy'],
+  'social media marketing': ['social media marketing', 'social media', 'social marketing', 'community marketing'],
+  'search marketing': ['search marketing', 'seo', 'sem', 'search engine marketing', 'ppc', 'google ads'],
+  'content marketing': ['content marketing', 'content strategy', 'branded content', 'content studio'],
+  'ooh advertising': ['ooh', 'out of home', 'out-of-home advertising', 'dooh', 'outdoor advertising'],
+  'experiential marketing': ['experiential marketing', 'experiential', 'brand activation', 'event marketing', 'btl'],
+  'pr & communications': ['public relations', 'pr agency', 'communications', 'corporate communications', 'reputation management'],
+  'market research': ['market research', 'consumer insights', 'market intelligence', 'brand research'],
+  d2c: ['d2c', 'dtc', 'direct to consumer', 'consumer brand'],
+  gaming: ['gaming', 'games', 'esports', 'mobile gaming'],
+  'ott & streaming': ['ott', 'streaming', 'video streaming', 'digital entertainment'],
 };
 
 function industryVariants(ind) {
@@ -1009,6 +1099,46 @@ export function roleMatches(text, roles = []) {
   return checked === 0; // nothing specific enough to check → don't filter it out
 }
 
+// Cities whose spellings/aliases should all count as the same place when
+// verifying a result actually mentions the requested location.
+const CITY_ALIASES = [
+  ['gurgaon', 'gurugram'],
+  ['bengaluru', 'bangalore'],
+  ['delhi', 'new delhi', 'ncr'],
+  ['bombay', 'mumbai'],
+  ['calcutta', 'kolkata'],
+  ['madras', 'chennai'],
+  ['noida', 'greater noida'],
+];
+
+function cityVariants(city) {
+  const norm = normText(city);
+  const group = CITY_ALIASES.find((g) => g.includes(norm));
+  return group ? group : [norm];
+}
+
+/**
+ * Does this profile text actually mention one of the requested locations?
+ * Free-text search engines match a city word appearing ANYWHERE on the page
+ * (a past employer's HQ, a recommendation, an unrelated mention), so a query
+ * for "Gurugram" routinely returns people who have no real tie to it. This
+ * checks the returned title/snippet for the city (or a known alias) before
+ * trusting the match. Lenient like roleMatches: if no location was requested,
+ * or the snippet is too short to say either way, it doesn't filter anything.
+ */
+export function locationMatches(text, cities = []) {
+  const list = (cities || []).map(clean).filter(Boolean);
+  if (!list.length) return true;
+  const hay = normText(text);
+  if (!hay) return true; // nothing to check against — don't drop it
+  for (const city of list) {
+    for (const variant of cityVariants(city)) {
+      if (variant && hay.includes(variant)) return true;
+    }
+  }
+  return false;
+}
+
 /** If the input is a Google/Bing search URL, pull out the actual query (q=…). */
 export function extractQuery(input) {
   const s = clean(input);
@@ -1068,6 +1198,9 @@ export async function searchProfiles(rawQueries, opts = {}) {
       let blockedStreak = 0;
       for (const { query, tag } of items) {
         const sizeBefore = seen.size;
+        // Set when an engine explicitly reports "no results" for this query, so
+        // a legitimately empty search isn't mistaken for rate-limiting below.
+        let emptyQuery = false;
         for (const engine of PAGED_ENGINES) {
           let gotAny = false;
           for (let p = 0; p < pages; p++) {
@@ -1077,12 +1210,28 @@ export async function searchProfiles(rawQueries, opts = {}) {
               await gotoSafe(page, engine.url(query, p), { waitUntil: 'domcontentloaded', timeout: 25000 });
               await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
               let html = await page.content();
+              // A page that explicitly says "no results" is a real answer, not a
+              // block — move to the next engine/query without any CAPTCHA wait.
+              if (looksLikeEmptyResults(html)) {
+                emptyQuery = true;
+                break;
+              }
               // Detect an engine block/CAPTCHA (e.g. Google's tiny "sorry" page).
               const blocked = looksLikeChallenge(html) || (engine.name === 'Google' && html.length < 15000 && !/linkedin\.com\/in\//i.test(html));
               if (blocked) {
                 // In visible mode, pause for the user to solve it once, then reload.
                 if (headful && await waitForManualSolve(page, logger)) {
+                  // Solving usually lands on a confirmation/home page, not the
+                  // results — re-run the actual query rather than trusting
+                  // whatever page we ended up on.
+                  await gotoSafe(page, engine.url(query, p), { waitUntil: 'domcontentloaded', timeout: 25000 });
+                  await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
                   html = await page.content();
+                  if (looksLikeChallenge(html)) {
+                    if (stats) stats.blocked = true;
+                    logger?.warn(`${engine.name} still blocked after solving — skipping.`);
+                    break;
+                  }
                 } else {
                   if (stats) stats.blocked = true;
                   logger?.warn(`${engine.name} is rate-limiting/CAPTCHA — skipping.`);
@@ -1107,8 +1256,10 @@ export async function searchProfiles(rawQueries, opts = {}) {
           if (gotAny && !allEngines) break; // one engine is enough in multi-query mode
         }
         // Circuit breaker: if every engine is blocked for several queries in a
-        // row, stop rather than grinding through the rest for nothing.
-        blockedStreak = seen.size === sizeBefore ? blockedStreak + 1 : 0;
+        // row, stop rather than grinding through the rest for nothing. A query
+        // that came back explicitly empty is a real answer — it must not count,
+        // or a run of niche companies would abort the whole search.
+        blockedStreak = seen.size === sizeBefore && !emptyQuery ? blockedStreak + 1 : 0;
         if (blockedStreak >= 5) {
           if (stats) stats.blocked = true;
           logger?.warn('All search engines are blocking — stopping early and returning what was found.');
@@ -1124,7 +1275,7 @@ export async function searchProfiles(rawQueries, opts = {}) {
   const out = [...seen.values()].map((c) => {
     const parsed = parseProfileTitle(c.title);
     // If we searched for a specific company, trust that over the parsed company.
-    return { ...parsed, company: c.tag || parsed.company, url: c.url, snippet: c.snippet, source: c.source || 'Search' };
+    return { ...parsed, company: c.tag || parsed.company, url: c.url, title: c.title, snippet: c.snippet, source: c.source || 'Search' };
   });
   logger?.success(`Profile search found ${out.length} LinkedIn profile(s).`);
   return out;

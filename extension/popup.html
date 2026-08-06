@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      :root {
+        --bg: #0b0e14;
+        --surface: #12161f;
+        --surface2: #181d28;
+        --border: #232b3a;
+        --text: #e7eaf2;
+        --text-dim: #8892a6;
+        --accent: #d7ff3f;
+        --accent-ink: #12150a;
+        --danger: #f87171;
+        --success: #34d399;
+      }
+      * { box-sizing: border-box; }
+      body {
+        width: 320px;
+        margin: 0;
+        padding: 14px;
+        background: var(--bg);
+        color: var(--text);
+        font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      h1 { margin: 0 0 2px; font-size: 14px; }
+      p.sub { margin: 0 0 12px; color: var(--text-dim); font-size: 11px; }
+      label { display: block; margin-bottom: 4px; color: var(--text-dim); font-size: 11px; }
+      input {
+        width: 100%; padding: 7px 9px; margin-bottom: 10px;
+        background: var(--surface2); color: var(--text);
+        border: 1px solid var(--border); border-radius: 7px; font-size: 12px;
+      }
+      button {
+        width: 100%; padding: 9px; border: 0; border-radius: 8px;
+        font-weight: 600; font-size: 13px; cursor: pointer; margin-bottom: 8px;
+      }
+      .primary { background: var(--accent); color: var(--accent-ink); }
+      .secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+      button:disabled { opacity: .5; cursor: default; }
+      #status { font-size: 11px; color: var(--text-dim); min-height: 16px; word-break: break-word; }
+      #status.err { color: var(--danger); }
+      #status.ok { color: var(--success); }
+      .count { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px; text-align: center; margin-bottom: 10px; }
+      .count b { font-size: 20px; color: var(--accent); display: block; }
+    </style>
+  </head>
+  <body>
+    <h1>EventScout Collector</h1>
+    <p class="sub">Open a LinkedIn people-search or profile page, then collect.</p>
+
+    <div class="count"><b id="num">0</b><span id="kind">nothing collected yet</span></div>
+
+    <button id="scrape" class="primary">Collect from this page</button>
+    <button id="send" class="secondary" disabled>Send to EventScout</button>
+
+    <label for="api">App URL</label>
+    <input id="api" value="http://localhost:4000" />
+
+    <div id="status"></div>
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import * as XLSX from 'xlsx';
-import { enrichPeople, searchProfiles, buildXrayQuery, classifyLead, findEvents, roleVariants, roleMatches } from '../enrich/linkedin.js';
+import { enrichPeople, searchProfiles, buildXrayQuery, classifyLead, findEvents, roleVariants, roleMatches, locationMatches } from '../enrich/linkedin.js';
 import { toCsv } from '../export/csv.js';
 import { buildRowsWorkbook } from '../export/excel.js';
 import { saveOutput } from '../storage/storage.js';
@@ -182,6 +182,10 @@ router.post('/search-profiles', async (req, res) => {
       // from a role-targeted search, so trust it); only drop a clearly-parsed
       // designation that doesn't match any searched role.
       .filter((p) => !strict || !roleFilter.length || !clean(p.designation) || roleMatches(`${p.designation} ${p.snippet}`, roleFilter))
+      // Search engines match a requested city appearing ANYWHERE on the page
+      // (a past employer's HQ, a recommendation, etc.), not just where the
+      // person is actually based — verify the city shows up in the title/snippet.
+      .filter((p) => !strict || !cityList.length || locationMatches(`${p.title || ''} ${p.designation || ''} ${p.snippet || ''}`, cityList))
       .map((p) => {
         const c = classifyLead(p);
         return {
@@ -240,13 +244,20 @@ router.post('/mine-posts', async (req, res) => {
   // company always gets at least one search — none are dropped.
   const MAX_QUERIES = 30;
   const splitRoles = roleList.length > 0 && companyList.length * roleList.length <= MAX_QUERIES;
+  // Expand each role into its phrasings ("VP Marketing" → "Vice President
+  // Marketing", …) exactly like Find People does — a single literal title is
+  // far too narrow once it's ANDed with a company and a city.
   const queries = [];
   for (const c of companyList) {
     const base = `site:linkedin.com/in "${c}"${locClause}`;
     if (splitRoles) {
-      for (const r of roleList) queries.push({ query: `${base} "${r}"`, tag: c });
+      for (const r of roleList) {
+        const variants = roleVariants(r);
+        queries.push({ query: variants.length ? `${base} (${variants.join(' OR ')})` : `${base} "${r}"`, tag: c });
+      }
     } else if (roleList.length) {
-      queries.push({ query: `${base} (${roleList.map((r) => `"${r}"`).join(' OR ')})`, tag: c });
+      const variants = [...new Set(roleList.flatMap(roleVariants))];
+      queries.push({ query: `${base} (${variants.join(' OR ')})`, tag: c });
     } else {
       queries.push({ query: base, tag: c });
     }
@@ -277,6 +288,7 @@ router.post('/mine-posts', async (req, res) => {
     const headers = ['Name', 'Designation', 'Seniority', 'Company', 'LinkedIn URL', 'Decision Score'];
     let rows = profiles
       .filter((p) => !strict || !roleList.length || !clean(p.designation) || roleMatches(`${p.designation} ${p.snippet}`, roleList))
+      .filter((p) => !strict || !cityList.length || locationMatches(`${p.title || ''} ${p.designation || ''} ${p.snippet || ''}`, cityList))
       .map((p) => {
         const c = classifyLead(p);
         return { Name: p.name, Designation: p.designation, Seniority: c.seniority, Company: p.company, 'LinkedIn URL': p.url, 'Decision Score': c.decisionScore, _junk: c.junk };
@@ -302,6 +314,57 @@ router.post('/mine-posts', async (req, res) => {
     logBus.error(jobId, err.message);
     res.status(500).json({ error: err.message, jobId });
   }
+});
+
+/**
+ * POST /api/import-linkedin
+ * Body: { rows: [{ name, designation?, company?, url, location? }], source? }
+ * Ingests LinkedIn profiles scraped client-side by the Chrome extension (from a
+ * page the user is already logged into — no CAPTCHA, no headless browser).
+ * Classifies + dedupes by profile URL and returns rows in the same shape as
+ * /search-profiles, plus an Excel + CSV export.
+ */
+router.post('/import-linkedin', async (req, res) => {
+  const { rows: incoming, source } = req.body || {};
+  const list = Array.isArray(incoming) ? incoming : [];
+  if (!list.length) return res.status(400).json({ error: 'Provide rows: [{ name, url, ... }].' });
+
+  const excludeJunk = req.body?.excludeJunk !== false;
+  const headers = ['Name', 'Designation', 'Seniority', 'Department', 'Company', 'LinkedIn URL', 'Decision Score', 'Source'];
+  const seen = new Set();
+  const rows = list
+    .map((r) => ({
+      name: clean(r.name),
+      designation: clean(r.designation),
+      company: clean(r.company),
+      url: clean(r.url),
+      snippet: clean(r.location || r.snippet),
+    }))
+    .filter((p) => p.name && p.url && !seen.has(p.url) && seen.add(p.url))
+    .map((p) => {
+      const c = classifyLead(p);
+      return {
+        Name: p.name,
+        Designation: p.designation,
+        Seniority: c.seniority,
+        Department: c.department,
+        Company: p.company,
+        'LinkedIn URL': p.url,
+        'Decision Score': c.decisionScore,
+        Source: source || 'Extension',
+        _junk: c.junk,
+      };
+    })
+    .filter((r) => !excludeJunk || !r._junk)
+    .sort((a, b) => b['Decision Score'] - a['Decision Score'])
+    .map(({ _junk, ...r }) => r);
+
+  const stamp = Date.now();
+  const xlsx = `linkedin_import_${stamp}.xlsx`;
+  const csv = `linkedin_import_${stamp}.csv`;
+  await saveOutput(xlsx, await buildRowsWorkbook(rows, 'Imported Leads', headers));
+  await saveOutput(csv, Buffer.from(toCsv(rows, headers)));
+  res.json({ rows, count: rows.length, downloadUrl: `/api/download/${xlsx}`, csvUrl: `/api/download/${csv}` });
 });
 
 const EVENT_FORMATS = ['Summit', 'Conference', 'Roundtable', 'Forum', 'Conclave', 'Leadership Summit', 'CXO Forum'];
