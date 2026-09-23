@@ -164,10 +164,11 @@ router.post('/search-profiles', async (req, res) => {
   const logger = jobLogger(jobId);
   try {
     logger.progress(5, 'Searching');
-    // Cap pages low: search engines truncate `site:` results to ~1 page, and many
-    // rapid page loads just trigger a CAPTCHA. More pages ≠ more results.
+    // No practical ceiling beyond a sanity backstop — the user solves any
+    // CAPTCHAs themselves in the visible browser, so more pages just means
+    // more manual solving, not a runaway automated request storm.
     const stats = {};
-    const profiles = await searchProfiles(queries, { logger, pages: Math.max(1, Math.min(3, Number(pages) || 2)), stats });
+    const profiles = await searchProfiles(queries, { logger, pages: Math.max(1, Math.min(20, Number(pages) || 2)), stats });
 
     // Classify each lead (seniority · department · heuristic decision score),
     // drop non-decision-makers (unless disabled), and sort by score.
@@ -268,7 +269,7 @@ router.post('/mine-posts', async (req, res) => {
   try {
     logger.progress(5, 'Searching');
     const stats = {};
-    const pageCount = Math.max(1, Math.min(3, Number(pages) || 2));
+    const pageCount = Math.max(1, Math.min(20, Number(pages) || 2));
     let profiles = await searchProfiles(queries, { logger, pages: pageCount, stats });
 
     // Second pass: small companies often have nobody matching role+location, so
@@ -340,7 +341,15 @@ router.post('/import-linkedin', async (req, res) => {
       url: clean(r.url),
       snippet: clean(r.location || r.snippet),
     }))
-    .filter((p) => p.name && p.url && !seen.has(p.url) && seen.add(p.url))
+    // A speaker whose LinkedIn wasn't found is still worth keeping — dedupe on
+    // the profile URL when there is one, otherwise on the name.
+    .filter((p) => {
+      if (!p.name) return false;
+      const key = p.url || `name:${p.name.toLowerCase()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
     .map((p) => {
       const c = classifyLead(p);
       return {
@@ -399,7 +408,7 @@ router.post('/find-events', async (req, res) => {
   try {
     logger.progress(5, 'Searching events');
     const stats = {};
-    const { events, profiles } = await findEvents(queries, { logger, pages: Math.max(1, Math.min(3, Number(pages) || 2)), stats });
+    const { events, profiles } = await findEvents(queries, { logger, pages: Math.max(1, Math.min(20, Number(pages) || 2)), stats });
 
     const eventRows = events.map((e) => ({ Event: e.title, URL: e.url, About: e.snippet }));
     const profileRows = profiles.map((p) => {

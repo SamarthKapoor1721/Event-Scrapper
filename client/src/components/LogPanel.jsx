@@ -5,6 +5,7 @@ const LEVEL_STYLES = {
   warn: 'text-[var(--warning)]',
   error: 'text-[var(--danger)]',
   success: 'text-[var(--success)]',
+  captcha: 'font-semibold text-[var(--warning)]',
 };
 
 export default function LogPanel({ logs, live }) {

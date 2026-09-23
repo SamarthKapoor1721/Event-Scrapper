@@ -59,8 +59,8 @@ export default function EventFinderPanel({ onScrapeEvent }) {
                 <input className="input" value={year} onChange={(e) => setYear(e.target.value)} placeholder="2024" />
               </label>
               <label className="block">
-                <span className="field-label">Pages (1–2)</span>
-                <input type="number" min="1" max="3" className="input" value={pages} onChange={(e) => setPages(e.target.value)} />
+                <span className="field-label">Pages</span>
+                <input type="number" min="1" max="20" className="input" value={pages} onChange={(e) => setPages(e.target.value)} />
               </label>
             </div>
           </div>
@@ -77,8 +77,8 @@ export default function EventFinderPanel({ onScrapeEvent }) {
               'Find Events'
             )}
           </button>
-          {result?.eventsUrl && <a href={result.eventsUrl} className="btn-secondary">Download events</a>}
-          {result?.leadsUrl && <a href={result.leadsUrl} className="btn-secondary">Download leads</a>}
+          {result?.eventsUrl && <a href={result.eventsUrl} download target="_blank" rel="noreferrer" className="btn-secondary">Download events</a>}
+          {result?.leadsUrl && <a href={result.leadsUrl} download target="_blank" rel="noreferrer" className="btn-secondary">Download leads</a>}
         </div>
 
         {error && <p className="mt-3 text-sm font-medium text-[var(--danger)]">{error}</p>}

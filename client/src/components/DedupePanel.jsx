@@ -79,8 +79,8 @@ export default function DedupePanel() {
             <span className="text-dim">(matched by {result.keyBy})</span>.
           </p>
           <div className="mt-3 flex gap-2">
-            <a href={result.downloadUrl} className="btn-secondary">Download Excel</a>
-            <a href={result.csvUrl} className="btn-secondary">Download CSV</a>
+            <a href={result.downloadUrl} download target="_blank" rel="noreferrer" className="btn-secondary">Download Excel</a>
+            <a href={result.csvUrl} download target="_blank" rel="noreferrer" className="btn-secondary">Download CSV</a>
           </div>
         </div>
       )}

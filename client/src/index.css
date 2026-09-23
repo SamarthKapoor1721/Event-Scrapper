@@ -543,6 +543,163 @@ button {
   animation: shimmer 1.4s linear infinite;
 }
 
+/* Toggle switch — used in place of bare checkboxes for option rows. */
+.toggle-track {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.toggle-track[data-on='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.toggle-thumb {
+  position: absolute;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text);
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), background 0.18s ease;
+}
+.toggle-track[data-on='true'] .toggle-thumb {
+  transform: translateX(16px);
+  background: var(--accent-ink);
+}
+
+/* Option row — a toggle plus label/description, used to replace checkbox rows. */
+.option-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+.option-row:hover {
+  background: var(--surface2);
+  border-color: var(--border);
+}
+.option-row[data-on='true'] {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+/* Small stat chip — used for the results-summary row. */
+.stat-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  min-width: 88px;
+}
+.stat-chip-value {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--text);
+  line-height: 1.1;
+}
+.stat-chip-label {
+  font-size: 10.5px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Avatar initial circle for a result row. */
+.avatar-ring {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 11.5px;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+/* Icon badge — used in section headers. */
+.icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* Gradient heading text. */
+.heading-gradient {
+  background: linear-gradient(90deg, var(--text), color-mix(in srgb, var(--text) 55%, var(--accent)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Segmented stepper (used for the result-pages field). */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.stepper-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 34px;
+  color: var(--text-dim);
+  transition: background 0.14s ease, color 0.14s ease;
+  cursor: pointer;
+}
+.stepper-btn:hover:not(:disabled) {
+  background: var(--surface2);
+  color: var(--text);
+}
+.stepper-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.stepper-value {
+  min-width: 34px;
+  text-align: center;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Sidebar nav: hover lift, and the icon picks up the accent. */
 .nav-btn {
   transition: background 0.16s ease, color 0.16s ease, border-color 0.16s ease, transform 0.14s ease;

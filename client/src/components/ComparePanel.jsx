@@ -19,6 +19,9 @@ export default function ComparePanel({ comparison, downloadUrl }) {
         {downloadUrl && (
           <a
             href={downloadUrl}
+            download
+            target="_blank"
+            rel="noreferrer"
             className="btn-primary !px-3 !py-1.5 !text-xs"
           >
             comparison.xlsx

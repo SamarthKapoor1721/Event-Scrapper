@@ -4,24 +4,15 @@
     <meta charset="utf-8" />
     <style>
       :root {
-        --bg: #0b0e14;
-        --surface: #12161f;
-        --surface2: #181d28;
-        --border: #232b3a;
-        --text: #e7eaf2;
-        --text-dim: #8892a6;
-        --accent: #d7ff3f;
-        --accent-ink: #12150a;
-        --danger: #f87171;
-        --success: #34d399;
+        --bg: #0b0e14; --surface: #12161f; --surface2: #181d28;
+        --border: #232b3a; --text: #e7eaf2; --text-dim: #8892a6;
+        --accent: #d7ff3f; --accent-ink: #12150a;
+        --danger: #f87171; --success: #34d399; --warning: #fbbf24;
       }
       * { box-sizing: border-box; }
       body {
-        width: 320px;
-        margin: 0;
-        padding: 14px;
-        background: var(--bg);
-        color: var(--text);
+        width: 340px; margin: 0; padding: 14px;
+        background: var(--bg); color: var(--text);
         font: 13px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
       h1 { margin: 0 0 2px; font-size: 14px; }
@@ -38,22 +29,28 @@
       }
       .primary { background: var(--accent); color: var(--accent-ink); }
       .secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
-      button:disabled { opacity: .5; cursor: default; }
+      button:disabled { opacity: .45; cursor: default; }
+      .count { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px; text-align: center; margin-bottom: 10px; }
+      .count b { font-size: 20px; color: var(--accent); display: block; }
       #status { font-size: 11px; color: var(--text-dim); min-height: 16px; word-break: break-word; }
       #status.err { color: var(--danger); }
       #status.ok { color: var(--success); }
-      .count { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px; text-align: center; margin-bottom: 10px; }
-      .count b { font-size: 20px; color: var(--accent); display: block; }
+      #status.warn { color: var(--warning); font-weight: 600; }
+      .track { height: 4px; background: var(--surface2); border-radius: 4px; overflow: hidden; margin-bottom: 8px; display: none; }
+      .fill { height: 100%; background: var(--accent); width: 0%; transition: width .2s; }
     </style>
   </head>
   <body>
     <h1>EventScout Collector</h1>
-    <p class="sub">Open a LinkedIn people-search or profile page, then collect.</p>
+    <p class="sub">Open an event's speakers page, then run the steps below.</p>
 
     <div class="count"><b id="num">0</b><span id="kind">nothing collected yet</span></div>
 
-    <button id="scrape" class="primary">Collect from this page</button>
-    <button id="send" class="secondary" disabled>Send to EventScout</button>
+    <div class="track" id="track"><div class="fill" id="fill"></div></div>
+
+    <button id="scrape" class="primary">1 · Scrape speakers from this page</button>
+    <button id="enrich" class="secondary" disabled>2 · Find LinkedIn profiles</button>
+    <button id="send" class="secondary" disabled>3 · Send to EventScout</button>
 
     <label for="api">App URL</label>
     <input id="api" value="http://localhost:4000" />

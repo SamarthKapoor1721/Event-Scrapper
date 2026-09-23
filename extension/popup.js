@@ -4,50 +4,98 @@ const status = (msg, cls = '') => {
   $('status').className = cls;
 };
 
-let collected = [];
+let people = []; // [{ name, designation, company, url?, status? }]
 
-// Remember the API URL and anything collected but not yet sent.
-chrome.storage.local.get(['apiUrl', 'collected'], (s) => {
+chrome.storage.local.get(['apiUrl', 'people'], (s) => {
   if (s.apiUrl) $('api').value = s.apiUrl;
-  if (Array.isArray(s.collected) && s.collected.length) {
-    collected = s.collected;
-    render(`${collected.length} saved from earlier`);
+  if (Array.isArray(s.people) && s.people.length) {
+    people = s.people;
+    render('saved from earlier');
   }
 });
 
 $('api').addEventListener('change', () => chrome.storage.local.set({ apiUrl: $('api').value.trim() }));
 
-function render(kindLabel) {
-  $('num').textContent = collected.length;
-  $('kind').textContent = kindLabel;
-  $('send').disabled = collected.length === 0;
-  chrome.storage.local.set({ collected });
+function render(label) {
+  const withUrl = people.filter((p) => p.url).length;
+  $('num').textContent = people.length;
+  $('kind').textContent = withUrl ? `${withUrl} with LinkedIn · ${label}` : label;
+  $('enrich').disabled = people.length === 0;
+  $('send').disabled = people.length === 0;
+  chrome.storage.local.set({ people });
 }
 
+function progress(done, total) {
+  $('track').style.display = total ? 'block' : 'none';
+  $('fill').style.width = total ? `${Math.round((done / total) * 100)}%` : '0%';
+}
+
+// Step 1 — scrape the speakers off whatever page is open.
 $('scrape').addEventListener('click', async () => {
-  status('Collecting…');
+  status('Scraping…');
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab?.url?.includes('linkedin.com')) return status('Open a LinkedIn page first.', 'err');
+  if (!tab?.id || /^chrome:|^chrome-extension:/.test(tab.url || '')) {
+    return status('Open the event page first.', 'err');
+  }
+  try {
+    const [{ result }] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      files: ['scrape-event.js'],
+    });
+    const found = Array.isArray(result) ? result : [];
+    if (!found.length) return status('No speakers found on this page.', 'err');
 
-  chrome.tabs.sendMessage(tab.id, { type: 'SCRAPE' }, (res) => {
-    if (chrome.runtime.lastError) {
-      return status('Reload the LinkedIn tab, then try again.', 'err');
+    // Merge with anything already collected, deduped by name.
+    const byName = new Map(people.map((p) => [p.name.toLowerCase(), p]));
+    let added = 0;
+    for (const p of found) {
+      if (!byName.has(p.name.toLowerCase())) { byName.set(p.name.toLowerCase(), p); added++; }
     }
-    if (!res || res.kind === 'unsupported') {
-      return status('Not a people-search or profile page.', 'err');
-    }
-    if (res.error) return status(res.error, 'err');
+    people = [...byName.values()];
+    render('scraped');
+    status(`Found ${found.length} · ${added} new.`, 'ok');
+  } catch (err) {
+    status(`Could not read this page: ${err.message}`, 'err');
+  }
+});
 
-    // Merge into whatever is already collected, deduped by profile URL.
-    const byUrl = new Map(collected.map((r) => [r.url, r]));
-    for (const r of res.rows) if (r.url && !byUrl.has(r.url)) byUrl.set(r.url, r);
-    const added = byUrl.size - collected.length;
-    collected = [...byUrl.values()];
-    render(`${res.kind} page`);
-    status(added ? `Added ${added} new profile(s).` : 'No new profiles on this page.', added ? 'ok' : '');
+// Step 2 — look up each speaker's LinkedIn profile.
+$('enrich').addEventListener('click', () => {
+  const todo = people.filter((p) => !p.url);
+  if (!todo.length) return status('Everyone already has a profile.', 'ok');
+  $('enrich').disabled = true;
+  $('scrape').disabled = true;
+  status(`Searching ${todo.length} profile(s)…`);
+  progress(0, todo.length);
+
+  chrome.runtime.sendMessage({ type: 'ENRICH', people: todo }, (res) => {
+    $('enrich').disabled = false;
+    $('scrape').disabled = false;
+    progress(0, 0);
+    if (chrome.runtime.lastError) return status(chrome.runtime.lastError.message, 'err');
+    if (res?.error) return status(res.error, 'err');
+
+    const byName = new Map(people.map((p) => [p.name.toLowerCase(), p]));
+    for (const r of res.rows || []) byName.set(r.name.toLowerCase(), { ...byName.get(r.name.toLowerCase()), ...r });
+    people = [...byName.values()];
+    const found = (res.rows || []).filter((r) => r.url).length;
+    render('enriched');
+    status(`Found ${found} of ${res.rows.length} profile(s).`, found ? 'ok' : 'err');
   });
 });
 
+// Live progress + CAPTCHA prompts from the background worker.
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg?.type !== 'PROGRESS') return;
+  if (msg.captcha) {
+    status('⚠ CAPTCHA — solve it in the tab that just opened. Waiting…', 'warn');
+    return;
+  }
+  progress(msg.done, msg.total);
+  if (msg.current) status(`Searching: ${msg.current} (${msg.done}/${msg.total})`);
+});
+
+// Step 3 — hand everything to the app.
 $('send').addEventListener('click', async () => {
   const api = $('api').value.trim().replace(/\/$/, '');
   if (!api) return status('Set your app URL first.', 'err');
@@ -57,12 +105,16 @@ $('send').addEventListener('click', async () => {
     const res = await fetch(`${api}/api/import-linkedin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ rows: collected, source: 'Extension' }),
+      body: JSON.stringify({
+        rows: people.map((p) => ({ name: p.name, designation: p.designation, company: p.company, url: p.url })),
+        source: 'Extension',
+        requireUrl: false,
+      }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
     status(`Sent — ${data.count} row(s) saved.`, 'ok');
-    collected = [];
+    people = [];
     render('sent');
   } catch (err) {
     status(`Failed: ${err.message}. Is the app running?`, 'err');

@@ -1,8 +1,32 @@
 import path from 'node:path';
 import os from 'node:os';
+import fs from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import stringSimilarity from 'string-similarity';
 import { clean, normalizeName, normalizeCompany } from '../normalize/normalize.js';
 import { getCached, putCached, flushCache } from './cache.js';
+import { searchViaPythonBatch } from './pythonSearch.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+/** Save a page that has real LinkedIn links but that our parser still found
+ *  zero of — a genuine parser bug (Google/Bing markup shift), inspected
+ *  directly instead of guessed at. Dumps only once per process so a long
+ *  run doesn't fill the disk with duplicates of the same issue. */
+let debugDumped = false;
+async function dumpDebugHtmlOnce(engineName, html, logger) {
+  if (debugDumped) return;
+  debugDumped = true;
+  try {
+    const dir = path.join(__dirname, '../../debug');
+    await fs.mkdir(dir, { recursive: true });
+    const file = path.join(dir, `zero-parsed-${engineName.toLowerCase()}-${Date.now()}.html`);
+    await fs.writeFile(file, html);
+    logger?.warn(`  ${engineName}: page has real content but 0 parsed — saved to ${path.relative(process.cwd(), file)} for inspection.`);
+  } catch {
+    /* best-effort only */
+  }
+}
 
 /**
  * LinkedIn Profile Discovery.
@@ -20,7 +44,8 @@ import { getCached, putCached, flushCache } from './cache.js';
  *
  * Search provider priority:
  *   1. Brave Search API   (BRAVE_API_KEY — reliable, works from servers)
- *   2. Keyless browser    (Brave/Ecosia/Bing/Startpage via Playwright — free)
+ *   2. Keyless browser    (Brave/Bing via Playwright — free; Ecosia excluded,
+ *                          its Cloudflare challenge doesn't render for Chromium)
  *
  * Result shape:
  *   { linkedin_url, confidence, confidence_level, status,
@@ -55,6 +80,7 @@ const ACRONYMS = {
   pr: 'public relations', bd: 'business development', it: 'information technology',
   gm: 'general manager', md: 'managing director', cx: 'customer experience',
   ux: 'user experience', hrbp: 'human resources business partner',
+  cdo: 'chief digital officer',
 };
 
 function meaningfulTokens(value) {
@@ -220,9 +246,16 @@ function buildQueries(person) {
 // Search providers
 // ---------------------------------------------------------------------------
 
+// Engines that keep re-challenging even right after the user solves one (seen
+// with Ecosia under some IPs/fingerprints) get skipped for the rest of that
+// search — asking the user to solve the same CAPTCHA over and over in one run
+// is worse than just not using that engine. Each search gets its own
+// gaveUpOn set (see enrichPeople/searchProfiles) so a bad run today doesn't
+// silently disable an engine for every future search until a restart.
+
+// Ecosia deliberately excluded — see the note on PAGED_ENGINES below.
 const SEARCH_ENGINES = [
   { name: 'Brave', url: (q) => `https://search.brave.com/search?q=${encodeURIComponent(q)}&source=web`, decode: (h) => h },
-  { name: 'Ecosia', url: (q) => `https://www.ecosia.org/search?q=${encodeURIComponent(q)}`, decode: decodeBingLike },
   { name: 'Bing', url: (q) => `https://www.bing.com/search?q=${encodeURIComponent(q)}`, decode: decodeBingLike },
 ];
 
@@ -238,11 +271,14 @@ function decodeBingLike(href) {
   }
 }
 
+// Real challenge pages say these as actual sentence fragments ("Our systems
+// have detected unusual traffic...", "...complete the captcha below to
+// continue"). The bare word "captcha" alone is NOT safe to match — Google
+// preloads captcha-infrastructure CSS/JS (e.g. a <link> to a recaptcha
+// stylesheet) on ordinary, unblocked result pages too, so a standalone-word
+// match fires on pages with zero visible challenge and real results.
 function looksLikeChallenge(html) {
-  return (
-    /captcha|are you a robot|unusual traffic|verify you are human/i.test(html) &&
-    !/linkedin\.com\/in\//i.test(html)
-  );
+  return /unusual traffic|verify you are human|are you a robot|complete the captcha|solve the captcha|captcha to continue|prove you'?re human/i.test(html);
 }
 
 /**
@@ -256,6 +292,68 @@ function looksLikeEmptyResults(html) {
     /did not match any documents|no results found|your search .{0,80} did not match|nothing matched your search/i.test(html) &&
     !/linkedin\.com\/in\//i.test(html)
   );
+}
+
+/**
+ * Any engine can silently drop the `site:` restriction and quoted phrases on
+ * a long OR-heavy query — instead of erroring or CAPTCHA-ing, it just returns
+ * an ordinary broad-match page about something else entirely (seen from both
+ * Google, "15-21 of 10,900 results", and Bing, "About 11,100 results").
+ *
+ * This is hard to detect reliably: matching the rendered result-count widget
+ * in raw HTML is fragile (engines split the number across nested tags in
+ * varying ways), and checking whether a query phrase appears anywhere on the
+ * page has false negatives (unrelated sidebar/ad text can coincidentally
+ * contain it). So this only flags the confident case — a query that clearly
+ * asked for a narrow subset (a quoted phrase) getting back a huge open-ended
+ * result count with no LinkedIn links at all. Every other "0 results" case
+ * (block, genuinely no matches, ordinary small page) is left to the generic
+ * "0 profile(s) parsed" log below — honest either way, since the two aren't
+ * reliably distinguishable from the response alone.
+ */
+function looksLikeIgnoredSiteOperator(html, query) {
+  // A real result page always has actual LinkedIn URLs in it somewhere — either
+  // as static <a href> markup (Bing/older Google) or embedded in Google's
+  // client-render JSON payload (see parseGoogleJsonResults below). Checking
+  // for the bare substring covers both without caring which format it's in.
+  if (/linkedin\.com\/in\//i.test(html)) return false;
+  if (!/"[^"]{4,}"/.test(String(query || ''))) return false; // nothing narrow was even asked for
+  return /\b(of\s+)?(about\s+)?[\d][\d,]{3,}\s*results?\b/i.test(html);
+}
+
+/** Undo JS string-literal escapes (\", \\, \/, \n, \uXXXX, …) from a regex capture. */
+function unescapeJsString(s) {
+  return String(s || '').replace(/\\u([0-9a-fA-F]{4})|\\(.)/g, (m, hex, ch) => {
+    if (hex) return String.fromCharCode(parseInt(hex, 16));
+    if (ch === 'n') return '\n';
+    if (ch === 't') return '\t';
+    return ch; // \" -> ", \\ -> \, \/ -> /, etc.
+  });
+}
+
+/**
+ * Google now renders organic results client-side from a JS data payload
+ * embedded in a <script> tag, rather than as static <a href> markup — the
+ * page we capture via page.content() has real LinkedIn URLs in it, but none
+ * of them are inside actual anchor tags, so a DOM-based scan finds nothing.
+ * Each result appears as a JS array literal:
+ *   ["https://in.linkedin.com/in/...","Name - Title","snippet text", ...]
+ * Extract those directly instead of relying on the DOM.
+ */
+function parseGoogleJsonResults(html) {
+  const re = /\["(https?:\/\/[^"]*linkedin\.com\/in\/[^"]+)","((?:[^"\\]|\\.)*)","((?:[^"\\]|\\.)*)"/g;
+  const out = [];
+  const seen = new Set();
+  let m;
+  while ((m = re.exec(html))) {
+    const url = cleanProfileUrl(unescapeJsString(m[1]));
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    const title = clean(unescapeJsString(m[2]));
+    const snippet = clean(unescapeJsString(m[3]));
+    out.push({ url, title, snippet, name: nameFromTitle(title) });
+  }
+  return out;
 }
 
 async function parseResults(html, decode) {
@@ -281,6 +379,12 @@ async function parseResults(html, decode) {
     const snippet = clean($card.find('[class*="description"], .b_caption p, .VwiC3b, .snippet-description, p').first().text());
     out.push({ url, title, snippet, name: nameFromTitle(title) });
   });
+  // Google increasingly renders results client-side from embedded JSON rather
+  // than static <a href> markup — fall back to extracting that directly when
+  // the DOM scan comes up empty but the page still has real LinkedIn URLs.
+  if (!out.length && /linkedin\.com\/in\//i.test(html)) {
+    return parseGoogleJsonResults(html);
+  }
   return out;
 }
 
@@ -288,7 +392,9 @@ async function parseResults(html, decode) {
  *  Sets `ctx.blocked = true` when it sees challenge/connection errors (vs. a genuine
  *  empty result) so the caller can back off when the engines start rate-limiting. */
 async function searchKeyless(page, query, logger, ctx) {
+  const gaveUpOn = ctx?.gaveUpOn || new Set();
   for (const engine of SEARCH_ENGINES) {
+    if (gaveUpOn.has(engine.name)) continue;
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         await gotoSafe(page, engine.url(query), { waitUntil: 'domcontentloaded', timeout: 25000 });
@@ -303,7 +409,13 @@ async function searchKeyless(page, query, logger, ctx) {
             await gotoSafe(page, engine.url(query), { waitUntil: 'domcontentloaded', timeout: 25000 });
             await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
             html = await page.content();
-            if (looksLikeChallenge(html)) break; // still blocked — try next engine
+            if (looksLikeChallenge(html)) {
+              // Re-challenged immediately after being solved — this engine isn't
+              // going to clear for this session; stop asking the user to fight it.
+              gaveUpOn.add(engine.name);
+              logger?.warn(`${engine.name} re-challenged right after being solved — skipping it for the rest of this run.`);
+              break;
+            }
             if (ctx) ctx.blocked = false;
           } else if (attempt === 0) {
             await delay(3000 + Math.floor(Math.random() * 2000));
@@ -314,6 +426,16 @@ async function searchKeyless(page, query, logger, ctx) {
         }
         const found = await parseResults(html, engine.decode);
         if (found.length) return found;
+        // Only decide *why* nothing was found after parsing (including its
+        // Google-JSON fallback) has actually come up empty — trust ground
+        // truth over a heuristic guess about the page's content.
+        if (looksLikeIgnoredSiteOperator(html, query)) {
+          if (ctx) ctx.blocked = true;
+          logger?.info(`  ${engine.name} ignored the site: filter on this query — skipping.`);
+        } else {
+          logger?.info(`  ${engine.name}: 0 profile(s) parsed from this page (${html.length} bytes).`);
+          if (/linkedin\.com\/in\//i.test(html)) await dumpDebugHtmlOnce(engine.name, html, logger);
+        }
         break;
       } catch (err) {
         // A renderer crash kills the tab — bail out so the caller can recreate it
@@ -598,13 +720,21 @@ async function openSearchContext(logger) {
     logger?.warn('Playwright not installed — cannot search.');
     return null;
   }
-  const args = ['--no-sandbox', '--disable-blink-features=AutomationControlled'];
+  // --incognito-mode-force-app-launch-tab and disabling session restore stop
+  // Chrome from reopening tabs left behind by a prior run that didn't shut
+  // down cleanly (e.g. the server restarting mid-search) — those stale tabs
+  // pile up alongside the current one and are easy to mistake for the tab
+  // actually being polled right now.
+  const args = ['--no-sandbox', '--disable-blink-features=AutomationControlled', '--hide-crash-restore-bubble', '--disable-session-crashed-bubble'];
   const consent = [{ name: 'CONSENT', value: 'YES+cb', domain: '.google.com', path: '/' }];
   try {
     if (HEADFUL) {
       const dir = path.join(os.tmpdir(), 'event-scraper-profile');
       const context = await chromium.launchPersistentContext(dir, { headless: false, args, viewport: { width: 1280, height: 900 }, userAgent: UA });
       await context.addCookies(consent).catch(() => {});
+      // Close any tab Chrome restored from a previous session's crash/kill —
+      // only the tab this run opens itself should be relevant to the user.
+      for (const p of context.pages()) await p.close().catch(() => {});
       await bringToFront();
       logger?.info('Visible browser (HEADFUL) — solve any CAPTCHA in the window; it will be remembered.');
       return { context, headful: true, close: async () => { await context.close().catch(() => {}); } };
@@ -619,10 +749,12 @@ async function openSearchContext(logger) {
   }
 }
 
-/** In headful mode, wait for the user to solve a shown CAPTCHA (up to ~2 min). */
+/** In headful mode, wait for the user to solve a shown CAPTCHA by hand
+ *  (up to ~2 min — enough to notice the prompt, switch to the browser
+ *  window, and clear a checkbox or simple image challenge). */
 async function waitForManualSolve(page, logger) {
   await bringToFront();
-  logger?.warn('⚠ CAPTCHA shown — please solve it in the browser window (waiting up to 2 min)…');
+  logger?.log('⚠ CAPTCHA — please solve it in the browser window (waiting up to 2 min)…', 'captcha');
   const deadline = Date.now() + 120000;
   while (Date.now() < deadline) {
     await page.waitForTimeout(2500);
@@ -757,7 +889,9 @@ export async function enrichPeople(people = [], opts = {}) {
   let next = 0;
   let blockStreak = 0; // consecutive lookups where the engines throttled us
   async function worker(wi) {
-    const ctx = { mode: session.mode, page: session.pages[wi] || null, validate: session.validate, headful: session.headful };
+    // gaveUpOn is scoped to this run only — an engine re-challenging today
+    // must not disable it for every future search until the server restarts.
+    const ctx = { mode: session.mode, page: session.pages[wi] || null, validate: session.validate, headful: session.headful, gaveUpOn: new Set() };
     while (true) {
       const k = next++;
       if (k >= pending.length) break;
@@ -872,11 +1006,14 @@ function decodeGoogle(href) {
 // first because it's the only engine that does `site:linkedin.com/in` X-ray
 // searches well — it can challenge a heavy/datacenter IP, but usually works
 // fine for normal (residential) use, so the others remain as fallbacks.
+// Ecosia is deliberately not in this list: its Cloudflare challenge routinely
+// fails to render the actual widget for automated Chromium (just the "Confirm
+// you're not a robot" text with nothing clickable underneath), so it's not
+// solvable at all rather than just inconvenient — not worth trying.
 const PAGED_ENGINES = [
   { name: 'Google', url: (q, p) => `https://www.google.com/search?q=${encodeURIComponent(q)}&num=20&start=${p * 10}&hl=en`, decode: decodeGoogle },
   { name: 'Brave', url: (q, p) => `https://search.brave.com/search?q=${encodeURIComponent(q)}&offset=${p}`, decode: (h) => h },
   { name: 'Bing', url: (q, p) => `https://www.bing.com/search?q=${encodeURIComponent(q)}&first=${p * 10 + 1}`, decode: decodeBingLike },
-  { name: 'Ecosia', url: (q, p) => `https://www.ecosia.org/search?q=${encodeURIComponent(q)}&p=${p}`, decode: decodeBingLike },
 ];
 
 /** Parse a LinkedIn result title into { name, designation, company }. */
@@ -1126,11 +1263,30 @@ function cityVariants(city) {
  * trusting the match. Lenient like roleMatches: if no location was requested,
  * or the snippet is too short to say either way, it doesn't filter anything.
  */
+// LinkedIn snippets that DO mention a location almost always do it as
+// "City, State, Country" or "Location: City" — used to tell "this text simply
+// never mentions any place" apart from "this text mentions a different place".
+// Each segment must start with a capital letter (real place names always do
+// in these snippets) — without that, ordinary sentence commas ("awards,
+// including...") false-match as if they were naming a place. NOT case
+// insensitive: an /i flag would let [A-Z] match lowercase too, defeating the
+// whole point of requiring capitalization.
+const LOCATION_SHAPE_RE = /\b[A-Z][a-zA-Z]*,\s*[A-Z][a-zA-Z]*(,\s*[A-Z][a-zA-Z]*)?\b/;
+const LOCATION_PREFIX_RE = /location\s*:/i;
+
 export function locationMatches(text, cities = []) {
   const list = (cities || []).map(clean).filter(Boolean);
   if (!list.length) return true;
+  // A person was already found BY a location-scoped search — a title/snippet
+  // that never mentions ANY place (just role + company, which is common and
+  // not location-specific text at all) is not evidence they're elsewhere.
+  // Only treat the absence of the requested city as meaningful once the text
+  // actually looks like it's naming a place — exactly like roleMatches skips
+  // role words too generic to verify instead of treating them as a mismatch.
+  const t = String(text || '');
+  if (!LOCATION_SHAPE_RE.test(t) && !LOCATION_PREFIX_RE.test(t)) return true;
   const hay = normText(text);
-  if (!hay) return true; // nothing to check against — don't drop it
+  if (!hay) return true;
   for (const city of list) {
     for (const variant of cityVariants(city)) {
       if (variant && hay.includes(variant)) return true;
@@ -1186,22 +1342,64 @@ export async function searchProfiles(rawQueries, opts = {}) {
       }
     }
   } else {
-    const session = await openSearchContext(logger);
-    if (!session) throw new Error('Search browser unavailable (Playwright not installed).');
-    const { context, headful, close } = session;
-    const page = await context.newPage();
+    // Python is the primary path — its own process, its own persistent
+    // browser profile with its own solved-CAPTCHA history, and none of the
+    // JS-side filtering bugs that kept resurfacing here. The Playwright/JS
+    // engines below (Google/Bing) only run as a fallback when Python comes
+    // up empty for a query, and the browser they need is opened lazily so a
+    // run where Python handles everything never launches it at all.
+    let session = null;
+    let page = null;
+    // For a single query, hit every JS engine and merge (maximize one
+    // search). For many queries (per city×role), use the first engine that
+    // answers each — the breadth comes from the queries, so we keep
+    // per-query load light.
+    const allEngines = queries.length === 1;
+    let blockedStreak = 0;
+    // Scoped to this call only — an engine re-challenging on one search must
+    // not disable it for every future search until the server restarts.
+    const gaveUpOn = new Set();
+
+    // One Python process for every query in this search — its own script
+    // already loops through many queries inside one browser session, so this
+    // avoids a fresh process-and-browser-launch cost per company/query.
+    const pyFound = await searchViaPythonBatch(queries, { pages, logger });
+    const foundByQuery = new Set();
+    for (const c of pyFound) {
+      const { query, tag } = items[c.queryIndex] || {};
+      if (!query || !c.url || seen.has(c.url)) continue;
+      seen.set(c.url, { ...c, source: 'Python', tag });
+      foundByQuery.add(c.queryIndex);
+    }
+    if (pyFound.length) logger?.success(`Python found ${pyFound.length} candidate(s) across ${foundByQuery.size} of ${items.length} quer${items.length === 1 ? 'y' : 'ies'}.`);
+
     try {
-      // For a single query, hit every engine and merge (maximize one search).
-      // For many queries (per city×role), use the first engine that answers each
-      // — the breadth comes from the queries, so we keep per-query load light.
-      const allEngines = queries.length === 1;
-      let blockedStreak = 0;
-      for (const { query, tag } of items) {
-        const sizeBefore = seen.size;
-        // Set when an engine explicitly reports "no results" for this query, so
-        // a legitimately empty search isn't mistaken for rate-limiting below.
-        let emptyQuery = false;
+      for (let qi = 0; qi < items.length; qi++) {
+        const { query, tag } = items[qi];
+        if (foundByQuery.has(qi)) {
+          if (queries.length > 1) logger?.info(`  ${seen.size} profile(s) collected so far…`);
+          blockedStreak = 0;
+          continue; // Python already found real results for this one
+        }
+
+        // Python came up empty for this query — fall back to the JS engines,
+        // opening the browser only the first time it's actually needed.
+        if (!session) {
+          session = await openSearchContext(logger);
+          if (session) page = await session.context.newPage();
+        }
+        if (!page) {
+          logger?.warn('No search browser available for the JS fallback (Playwright not installed) — skipping.');
+          continue;
+        }
+        const { headful } = session;
+        // Only a genuine block/CAPTCHA/degraded-result signal counts toward the
+        // circuit breaker below — a query that simply found nobody (a small or
+        // niche company with little LinkedIn presence, which is common and
+        // expected across a long company list) must not count as a strike.
+        let queryWasBlocked = false;
         for (const engine of PAGED_ENGINES) {
+          if (gaveUpOn.has(engine.name)) continue;
           let gotAny = false;
           for (let p = 0; p < pages; p++) {
             // One bad page must never crash the whole search — catch everything
@@ -1213,7 +1411,6 @@ export async function searchProfiles(rawQueries, opts = {}) {
               // A page that explicitly says "no results" is a real answer, not a
               // block — move to the next engine/query without any CAPTCHA wait.
               if (looksLikeEmptyResults(html)) {
-                emptyQuery = true;
                 break;
               }
               // Detect an engine block/CAPTCHA (e.g. Google's tiny "sorry" page).
@@ -1229,11 +1426,16 @@ export async function searchProfiles(rawQueries, opts = {}) {
                   html = await page.content();
                   if (looksLikeChallenge(html)) {
                     if (stats) stats.blocked = true;
-                    logger?.warn(`${engine.name} still blocked after solving — skipping.`);
+                    queryWasBlocked = true;
+                    // Re-challenged immediately after being solved — not going to
+                    // clear for this session; stop asking the user to fight it.
+                    gaveUpOn.add(engine.name);
+                    logger?.warn(`${engine.name} re-challenged right after being solved — skipping it for the rest of this run.`);
                     break;
                   }
                 } else {
                   if (stats) stats.blocked = true;
+                  queryWasBlocked = true;
                   logger?.warn(`${engine.name} is rate-limiting/CAPTCHA — skipping.`);
                   break;
                 }
@@ -1242,8 +1444,26 @@ export async function searchProfiles(rawQueries, opts = {}) {
               const before = seen.size;
               for (const c of found) if (!seen.has(c.url)) seen.set(c.url, { ...c, source: engine.name, tag });
               const added = seen.size - before;
-              if (found.length) gotAny = true;
-              else if (p === 0) break; // engine empty for this query → next engine
+              if (found.length) {
+                gotAny = true;
+              } else if (looksLikeIgnoredSiteOperator(html, query)) {
+                // Only call this out once we've actually confirmed parsing found
+                // nothing — parseResults (including its Google-JSON fallback) is
+                // ground truth; this heuristic is just for naming *why* it's empty.
+                if (stats) stats.blocked = true;
+                queryWasBlocked = true;
+                logger?.warn(`${engine.name} ignored the site: filter on this query (returned unrelated broad-match results) — skipping.`);
+                break;
+              } else if (p === 0) {
+                // Nothing matched our parser on a page that wasn't flagged as a
+                // block/CAPTCHA/degraded-query/empty-results — say so, otherwise
+                // a run of these looks identical to a silent hang from outside.
+                logger?.info(`  ${engine.name}: 0 profile(s) parsed from this page (${html.length} bytes).`);
+                // The page genuinely has real LinkedIn URLs but we extracted none
+                // of them — a real parser bug (markup shift), worth capturing.
+                if (/linkedin\.com\/in\//i.test(html)) await dumpDebugHtmlOnce(engine.name, html, logger);
+                break; // engine empty for this query → next engine
+              }
               // `site:` searches are truncated, so once a deeper page stops adding
               // new profiles, stop paging (and avoid extra CAPTCHA risk).
               if (p > 0 && added === 0) break;
@@ -1255,20 +1475,22 @@ export async function searchProfiles(rawQueries, opts = {}) {
           }
           if (gotAny && !allEngines) break; // one engine is enough in multi-query mode
         }
-        // Circuit breaker: if every engine is blocked for several queries in a
-        // row, stop rather than grinding through the rest for nothing. A query
-        // that came back explicitly empty is a real answer — it must not count,
-        // or a run of niche companies would abort the whole search.
-        blockedStreak = seen.size === sizeBefore && !emptyQuery ? blockedStreak + 1 : 0;
-        if (blockedStreak >= 5) {
+        // Circuit breaker: if engines are genuinely blocking for many queries in
+        // a row, stop rather than grinding through the rest for nothing. Only a
+        // real block/CAPTCHA/degraded-result signal counts as a strike — a
+        // query that simply found nobody (a small/niche company, or one that
+        // explicitly reported "no results") is a normal, expected outcome
+        // across a long company list and must never trip this.
+        blockedStreak = queryWasBlocked ? blockedStreak + 1 : 0;
+        if (blockedStreak >= 10) {
           if (stats) stats.blocked = true;
-          logger?.warn('All search engines are blocking — stopping early and returning what was found.');
+          logger?.warn('Search engines have been blocking for 10 queries in a row — stopping early and returning what was found.');
           break;
         }
         if (queries.length > 1) logger?.info(`  ${seen.size} profile(s) collected so far…`);
       }
     } finally {
-      await close();
+      if (session) await session.close();
     }
   }
 

@@ -52,7 +52,7 @@ export default function SearchPanel() {
               <input
                 type="number"
                 min="1"
-                max="10"
+                max="20"
                 className="input w-20"
                 value={pages}
                 onChange={(e) => setPages(e.target.value)}
@@ -68,8 +68,8 @@ export default function SearchPanel() {
                 'Search Profiles'
               )}
             </button>
-            {result?.downloadUrl && <a href={result.downloadUrl} className="btn-secondary">Download Excel</a>}
-            {result?.csvUrl && <a href={result.csvUrl} className="btn-secondary">Download CSV</a>}
+            {result?.downloadUrl && <a href={result.downloadUrl} download target="_blank" rel="noreferrer" className="btn-secondary">Download Excel</a>}
+            {result?.csvUrl && <a href={result.csvUrl} download target="_blank" rel="noreferrer" className="btn-secondary">Download CSV</a>}
           </div>
 
           {error && <p className="text-sm font-medium text-[var(--danger)]">{error}</p>}

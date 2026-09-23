@@ -1,13 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "EventScout LinkedIn Collector",
-  "version": "1.0.0",
-  "description": "Collect LinkedIn profiles from search results and profile pages, and send them to your EventScout app.",
-  "permissions": ["activeTab", "scripting", "storage"],
-  "host_permissions": [
-    "https://www.linkedin.com/*",
-    "http://localhost/*"
-  ],
+  "name": "EventScout Collector",
+  "version": "1.1.0",
+  "description": "Scrape speakers from any event page, find their LinkedIn profiles, and send them to your EventScout app.",
+  "permissions": ["activeTab", "scripting", "storage", "tabs"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_popup": "popup.html",
     "default_title": "EventScout Collector"

@@ -14,6 +14,12 @@ const RELEVANT = /speaker|exhibitor|sponsor|partner|compan|delegate|attendee|age
 // Asset/utility links we never want to enqueue.
 const SKIP = /\.(pdf|jpe?g|png|gif|svg|webp|zip|mp4|mp3|css|js|ico|woff2?|ttf)(\?|$)/i;
 
+// Pages that are never speaker/company content — a site's own search results,
+// cart/checkout, auth, or admin pages. These waste a crawl slot and can look
+// like the crawler "went somewhere random" when one gets visited early.
+const JUNK = /(^|\/)(search|cart|checkout|login|logout|signin|signup|register|account|admin|wp-admin|wp-login)(\/|\?|$)/i;
+const JUNK_QUERY = /^(s|q|query|search)$/i; // ?s=..., ?q=..., ?search=...
+
 /** Strip hash, trailing slash, and common tracking params for stable identity. */
 export function canonicalize(url) {
   try {
@@ -63,6 +69,8 @@ export function collectLinks(html, pageUrl, rootUrl) {
     if (abs.protocol !== 'http:' && abs.protocol !== 'https:') return;
     if (abs.hostname !== rootHost) return; // same domain only
     if (SKIP.test(abs.pathname)) return;
+    if (JUNK.test(abs.pathname)) return;
+    if ([...abs.searchParams.keys()].some((k) => JUNK_QUERY.test(k))) return;
     out.add(canonicalize(abs.toString()));
   });
   return [...out];

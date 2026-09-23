@@ -76,7 +76,7 @@ export default function BatchPanel() {
               )}
             </button>
             {result?.downloadUrl && (
-              <a href={result.downloadUrl} className="btn-secondary">Download results CSV</a>
+              <a href={result.downloadUrl} download target="_blank" rel="noreferrer" className="btn-secondary">Download results CSV</a>
             )}
             {busy && <span className="text-xs text-dim">This can take a few minutes for large lists.</span>}
           </div>

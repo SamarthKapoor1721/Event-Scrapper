@@ -231,7 +231,13 @@ export default function App() {
   function triggerDownload(url) {
     const a = document.createElement('a');
     a.href = url;
+    a.download = ''; // hint the browser to save rather than navigate
+    a.rel = 'noreferrer';
+    // Some browsers only honor a synthetic click on an anchor that's actually
+    // in the DOM — attach it, click, then clean up right after.
+    document.body.appendChild(a);
     a.click();
+    a.remove();
   }
 
   const NAV = [

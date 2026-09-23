@@ -59,8 +59,8 @@ export default function PostMinerPanel() {
           <Picker label="Posts / designations (optional)" options={ROLE_PRESETS} values={roles} setValues={setRoles} placeholder="Search a post e.g. CTO, HR Head…" />
           <Picker label="Location (optional)" options={CITY_PRESETS} values={cities} setValues={setCities} placeholder="Search a city…" />
           <label className="block">
-            <span className="field-label">Result pages (1–2 best)</span>
-            <input type="number" min="1" max="3" className="input" value={pages} onChange={(e) => setPages(e.target.value)} />
+            <span className="field-label">Result pages</span>
+            <input type="number" min="1" max="20" className="input" value={pages} onChange={(e) => setPages(e.target.value)} />
           </label>
         </div>
 
@@ -75,8 +75,8 @@ export default function PostMinerPanel() {
               'Find POCs'
             )}
           </button>
-          {result?.downloadUrl && <a href={result.downloadUrl} className="btn-secondary">Download Excel</a>}
-          {result?.csvUrl && <a href={result.csvUrl} className="btn-secondary">Download CSV</a>}
+          {result?.downloadUrl && <a href={result.downloadUrl} download target="_blank" rel="noreferrer" className="btn-secondary">Download Excel</a>}
+          {result?.csvUrl && <a href={result.csvUrl} download target="_blank" rel="noreferrer" className="btn-secondary">Download CSV</a>}
         </div>
 
         {error && <p className="mt-3 text-sm font-medium text-[var(--danger)]">{error}</p>}
